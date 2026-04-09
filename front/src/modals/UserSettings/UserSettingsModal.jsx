@@ -12,7 +12,6 @@ import {
 
 import { useModal } from "../ModalContext";
 import BaseModal from "../BaseModal";
-import DefaultModelSelector from "./DefaultModelSelector";
 import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
@@ -70,7 +69,6 @@ export default function UserSettingsModal({
   isOpen,
   onClose,
   userData,
-  modelsData,
   localState,
 }) {
   const { t } = useTranslation();
@@ -121,21 +119,13 @@ export default function UserSettingsModal({
     if (activeTab === "chat") {
       return (
         <div className="flex flex-col gap-5">
-          {modelsData ? (
-            <DefaultModelSelector modelsData={modelsData} />
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("common.loading")}
-            </p>
-          )}
           {choicesModule && (
-            <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <>
               <SuggestionPreference />
-            </div>
+              <div className="border-t border-gray-200 dark:border-gray-700" />
+            </>
           )}
-          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
-            <TimeoutSetter />
-          </div>
+          <TimeoutSetter />
         </div>
       );
     }
