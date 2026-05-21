@@ -1,5 +1,11 @@
 # Changelog 
 
+## Version: v0.9.4 (21.05.2026)
+Highlights:
+- Upstream error messages stored and shown permanently
+- Parses and displays cost statistics from /user endpoint
+- Added docling processing support for .docx files 
+
 ## Version: v0.9.3 (24.04.2026)
 Highlights:
 - Added speech generation for received messages
