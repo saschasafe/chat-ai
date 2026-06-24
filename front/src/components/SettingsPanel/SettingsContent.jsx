@@ -454,7 +454,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             localState={localState}
             setLocalState={setLocalState}
           />
-          <div className="flex flex-wrap md:justify-end gap-2 md:gap-4 items-center w-full">
+          <div className="flex flex-wrap md:justify-end gap-4 md:gap-6 items-center w-full pt-4 border-t border-gray-200 dark:border-gray-700">
             {/* Share Settings Button */}
             <ShareSettingsButton
               localState={localState}
