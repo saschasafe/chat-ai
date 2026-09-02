@@ -184,9 +184,10 @@ export function useLiveConversation({
     else setStatus("idle");
   }, [stopSpeaking]);
 
-  // Force the current turn to end without waiting for the silence timeout
+  // Force the current turn to end without waiting for the silence timeout.
+  // `force` submits the take even if the detector never flagged speech.
   const endTurn = useCallback(() => {
-    recorderRef.current.stop();
+    recorderRef.current.stop({ force: true });
   }, []);
 
   useEffect(() => {

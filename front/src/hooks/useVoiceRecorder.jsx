@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { convertToWav } from "../utils/attachments";
 
-const SPEECH_THRESHOLD = 0.045; // Normalised level above which we assume speech
-const NOISE_FLOOR = 0.02; // Below this we treat the input as silence
+// Levels are time domain RMS, so roughly 0.05 to 0.25 for normal speech and
+// well under 0.01 for a quiet room.
+const SPEECH_THRESHOLD = 0.03; // Above this we assume speech
+const NOISE_FLOOR = 0.012; // Below this we treat the input as silence
+const LEVEL_DECAY = 0.82; // Smooths the meter so the orb does not flicker
 
 /**
  * Microphone recorder with voice activity detection.
@@ -34,6 +37,8 @@ export function useVoiceRecorder({
   const lastSpeechAtRef = useRef(0);
   const startedAtRef = useRef(0);
   const cancelledRef = useRef(false);
+  const forcedRef = useRef(false);
+  const smoothedLevelRef = useRef(0);
   const mimeTypeRef = useRef("audio/webm");
 
   // Keep the latest callbacks without restarting the analyser loop
@@ -59,11 +64,17 @@ export function useVoiceRecorder({
     }
     analyserRef.current = null;
     dataArrayRef.current = null;
+    smoothedLevelRef.current = 0;
     setLevel(0);
   }, []);
 
-  const stop = useCallback(() => {
+  /**
+   * Stop recording. `force` submits the take even when the detector never
+   * registered speech, which is what the manual "send now" control needs.
+   */
+  const stop = useCallback(({ force = false } = {}) => {
     if (!isRecordingRef.current) return;
+    if (force) forcedRef.current = true;
     isRecordingRef.current = false;
     setIsRecording(false);
     const recorder = mediaRecorderRef.current;
@@ -104,18 +115,20 @@ export function useVoiceRecorder({
       });
       streamRef.current = stream;
       cancelledRef.current = false;
+      forcedRef.current = false;
       chunksRef.current = [];
       hasSpeechRef.current = false;
+      smoothedLevelRef.current = 0;
       setHasSpeech(false);
 
       // Level metering + voice activity detection
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
+      analyser.fftSize = 1024;
       audioContext.createMediaStreamSource(stream).connect(analyser);
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
-      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+      dataArrayRef.current = new Uint8Array(analyser.fftSize);
 
       let mimeType = "audio/webm";
       for (const candidate of [
@@ -140,7 +153,7 @@ export function useVoiceRecorder({
 
       recorder.onstop = async () => {
         const wasCancelled = cancelledRef.current;
-        const spoke = hasSpeechRef.current;
+        const spoke = hasSpeechRef.current || forcedRef.current;
         const chunks = chunksRef.current;
         chunksRef.current = [];
         teardown();
@@ -166,10 +179,24 @@ export function useVoiceRecorder({
 
       const tick = () => {
         if (!isRecordingRef.current || !analyserRef.current) return;
-        analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-        const sum = dataArrayRef.current.reduce((acc, value) => acc + value, 0);
-        const normalized = sum / dataArrayRef.current.length / 255;
-        setLevel(normalized);
+
+        // Time domain RMS. Averaging the frequency bins instead would dilute
+        // speech energy across the mostly empty high bins and barely move.
+        const samples = dataArrayRef.current;
+        analyserRef.current.getByteTimeDomainData(samples);
+        let sumSquares = 0;
+        for (let i = 0; i < samples.length; i++) {
+          const deviation = (samples[i] - 128) / 128;
+          sumSquares += deviation * deviation;
+        }
+        const normalized = Math.sqrt(sumSquares / samples.length);
+
+        // Fast attack, slow release, so the orb follows speech smoothly
+        smoothedLevelRef.current = Math.max(
+          normalized,
+          smoothedLevelRef.current * LEVEL_DECAY
+        );
+        setLevel(smoothedLevelRef.current);
 
         const now = Date.now();
         if (normalized > SPEECH_THRESHOLD) {

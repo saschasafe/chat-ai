@@ -8,28 +8,45 @@ const STATUS_STYLES = {
   speaking: "bg-emerald-500",
 };
 
+// Speech RMS rarely passes ~0.3, so the meter is amplified to fill the ring
+const LEVEL_GAIN = 3;
+
 // Pulsing indicator that reflects the current stage of the voice loop
 export default function VoiceOrb({ status, level = 0, isActive }) {
-  // Clamp the mic level so a loud room cannot blow up the layout
-  const scale = status === "listening" ? 1 + Math.min(level, 0.5) * 0.9 : 1;
+  const isListening = status === "listening";
+  // Clamp the amplified level so a loud room cannot blow up the layout
+  const amplified = isListening ? Math.min(level * LEVEL_GAIN, 1) : 0;
+  const color = STATUS_STYLES[status] || STATUS_STYLES.idle;
 
   return (
     <div className="relative flex h-40 w-40 items-center justify-center">
-      {/* Reactive halo */}
+      {/* Outer halo, driven by the microphone level */}
       <div
-        className={`absolute rounded-full opacity-30 transition-transform duration-75 ${
-          STATUS_STYLES[status] || STATUS_STYLES.idle
-        }`}
+        className={`absolute rounded-full transition-transform duration-100 ease-out ${color}`}
         style={{
           height: "10rem",
           width: "10rem",
-          transform: `scale(${scale})`,
+          opacity: 0.18 + amplified * 0.22,
+          transform: `scale(${0.62 + amplified * 0.38})`,
         }}
       />
+      {/* Inner halo reacts harder, so quiet speech is still visible */}
       <div
-        className={`relative flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg ${
-          STATUS_STYLES[status] || STATUS_STYLES.idle
-        } ${status === "speaking" ? "animate-pulse" : ""}`}
+        className={`absolute rounded-full transition-transform duration-75 ease-out ${color}`}
+        style={{
+          height: "7rem",
+          width: "7rem",
+          opacity: 0.3 + amplified * 0.3,
+          transform: `scale(${0.9 + amplified * 0.45})`,
+        }}
+      />
+      {/* While listening but silent, a slow breath shows the mic is live */}
+      <div
+        className={`relative flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg ${color} ${
+          status === "speaking" || (isListening && amplified < 0.05)
+            ? "animate-pulse"
+            : ""
+        }`}
       >
         {status === "transcribing" || status === "thinking" ? (
           <Loader2 className="h-9 w-9 animate-spin" />
