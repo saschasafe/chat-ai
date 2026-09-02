@@ -20,6 +20,8 @@ import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 import { Navigate, useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
+import LiveModeOverlay from "../components/LiveMode/LiveModeOverlay";
+import { useLiveMode } from "../components/LiveMode/LiveModeContext";
 
 export default function ChatPage() {
   const params = useParams();
@@ -34,6 +36,7 @@ export default function ChatPage() {
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const { isOpen: isLiveModeOpen } = useLiveMode();
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({
@@ -93,6 +96,15 @@ export default function ChatPage() {
           className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"
         />
       </div>
+
+      {/* Live mode renders here so it can drive the active conversation */}
+      {isLiveModeOpen && (
+        <LiveModeOverlay
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+        />
+      )}
     </div>
   );
 }

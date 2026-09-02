@@ -406,6 +406,57 @@ app.post("/chat/completions", async (req, res) => {
   }
 });
 
+// Build auth headers, preferring the configured API key over a forwarded inference id
+function buildAuthHeaders(inference_id) {
+  const headers = { "inference-portal": serviceName };
+  if (apiKey) {
+    headers.Authorization = "Bearer " + apiKey;
+  } else if (inference_id) {
+    headers["inference-id"] = inference_id;
+  }
+  return headers;
+}
+
+// Speech to text, used by live mode
+app.post("/audio/transcriptions", async (req, res) => {
+  if (!req.files || !req.files.file) {
+    return res.status(422).json({ error: "No audio file provided" });
+  }
+
+  const inference_id = req.headers["inference-id"];
+  const file = req.files.file;
+  const model = req.body.model || "whisper-large-v2";
+  const language = req.body.language;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file.data, {
+      filename: file.name || "audio.wav",
+      contentType: file.mimetype || "audio/wav",
+    });
+    formData.append("model", model);
+    // Always ask for plain text, the caller only needs the transcript
+    formData.append("response_format", "text");
+    if (language) formData.append("language", language);
+
+    const response = await fetch(apiEndpoint + "/audio/transcriptions", {
+      method: "POST",
+      headers: buildAuthHeaders(inference_id),
+      body: formData,
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      console.error("Transcription error:", response.status, text);
+      return res.status(response.status).json({ error: text || response.statusText });
+    }
+    return res.status(200).json({ text: text.trim() });
+  } catch (err) {
+    console.error("Transcription error:", err);
+    return res.status(500).json({ error: "Failed to transcribe audio" });
+  }
+});
+
 // Start Chat AI Backend App
 app.listen(port, () => {
   console.log(`Chat AI backend listening on port ${port}`);

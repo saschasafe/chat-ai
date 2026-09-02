@@ -11,6 +11,7 @@ import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
+import LiveModeButton from "./LiveModeButton";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -124,7 +125,10 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
-            
+            {/* Live Mode Button */}
+            <LiveModeButton
+              localState={localState}
+            />
           </div>
           {/* Buttons in the center */}
           <div className="flex gap-4 items-center justify-center">
