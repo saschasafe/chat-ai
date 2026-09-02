@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { createBackendClient } from "./openaiClient";
 
 const DEFAULT_PROMPT =
   "Describe what is visible in this frame in one or two short, factual sentences. " +
@@ -49,15 +49,6 @@ function cleanDescription(raw) {
   return text.replace(/^["'\s]+|["'\s]+$/g, "");
 }
 
-function resolveBaseURL() {
-  let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
-  try {
-    return new URL(baseURL).toString();
-  } catch {
-    return new URL(baseURL, window.location.origin).toString();
-  }
-}
-
 // Describe a single captured frame, using the previous descriptions as context
 export async function describeFrame({
   dataUrl,
@@ -67,12 +58,7 @@ export async function describeFrame({
   signal = null,
   timeout = 30000,
 }) {
-  const openai = new OpenAI({
-    baseURL: resolveBaseURL(),
-    apiKey: null,
-    dangerouslyAllowBrowser: true,
-    timeout,
-  });
+  const openai = createBackendClient(timeout);
 
   const userContent = [];
   const contextText = buildContextText(previousDescriptions);
