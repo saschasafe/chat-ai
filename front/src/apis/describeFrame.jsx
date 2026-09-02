@@ -20,6 +20,35 @@ function buildContextText(previousDescriptions) {
   );
 }
 
+// Reasoning models sometimes write their drafts into the content. Keep only the
+// final description so the rolling observation stream stays readable.
+const DRAFT_MARKER = /(^|\n)\s*(draft\s*\d|final polish|final answer|revised|let'?s |let me |okay|alright)/i;
+
+function cleanDescription(raw) {
+  if (typeof raw !== "string") return "";
+
+  let text = raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/^[\s\S]*?<\/think>/i, "")
+    .trim();
+
+  if (DRAFT_MARKER.test(text)) {
+    // Prefer the last quoted candidate, that is where these models put the result
+    const quoted = text.match(/"([^"]{20,})"/g);
+    if (quoted?.length) {
+      text = quoted[quoted.length - 1];
+    } else {
+      const paragraphs = text
+        .split(/\n{2,}|\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !DRAFT_MARKER.test(line));
+      if (paragraphs.length) text = paragraphs[paragraphs.length - 1];
+    }
+  }
+
+  return text.replace(/^["'\s]+|["'\s]+$/g, "");
+}
+
 function resolveBaseURL() {
   let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
   try {
@@ -60,7 +89,9 @@ export async function describeFrame({
         {
           role: "system",
           content:
-            "You are a precise visual observer. You answer with a short factual description and nothing else.",
+            "You are a precise visual observer. Answer with one or two short factual " +
+            "sentences and nothing else. Never show drafts, alternatives, reasoning or " +
+            "preambles, and never wrap the answer in quotation marks.",
         },
         { role: "user", content: userContent },
       ],
@@ -71,8 +102,7 @@ export async function describeFrame({
     signal ? { signal } : undefined
   );
 
-  const text = response?.choices?.[0]?.message?.content;
-  return typeof text === "string" ? text.trim() : "";
+  return cleanDescription(response?.choices?.[0]?.message?.content);
 }
 
 export { DEFAULT_PROMPT as DEFAULT_FRAME_PROMPT };

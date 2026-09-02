@@ -22,6 +22,8 @@ export function useVisionLoop({
   const descriptionsRef = useRef([]);
   const inFlightRef = useRef(false);
   const timerRef = useRef(null);
+  // Bumped whenever the loop is torn down, so a late reply is discarded
+  const runIdRef = useRef(0);
 
   const onErrorRef = useRef(onError);
   const captureFrameRef = useRef(captureFrame);
@@ -44,12 +46,14 @@ export function useVisionLoop({
 
     inFlightRef.current = true;
     setIsDescribing(true);
+    const runId = runIdRef.current;
     try {
       const text = await describeFrame({
         dataUrl,
         model,
         previousDescriptions: descriptionsRef.current.map((entry) => entry.text),
       });
+      if (runId !== runIdRef.current) return null;
       if (text) {
         const entry = { text, at: Date.now() };
         descriptionsRef.current = [...descriptionsRef.current, entry].slice(
@@ -60,6 +64,7 @@ export function useVisionLoop({
       }
       return text;
     } catch (error) {
+      if (runId !== runIdRef.current) return null;
       setLastError(error?.message || String(error));
       onErrorRef.current?.(error);
       return null;
@@ -81,6 +86,7 @@ export function useVisionLoop({
     runOnce();
     timerRef.current = setInterval(runOnce, Math.max(1000, intervalMs));
     return () => {
+      runIdRef.current += 1;
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
