@@ -11,7 +11,12 @@ import { useMediaCapture } from "../../hooks/useMediaCapture";
 import { useVisionLoop } from "../../hooks/useVisionLoop";
 import { useLiveConversation } from "../../hooks/useLiveConversation";
 import { useToast } from "../../hooks/useToast";
-import { getVoicesForLanguage, getDefaultVoice, SPEECH_LANGUAGES } from "../../utils/speech";
+import {
+  getVoicesForLanguage,
+  getDefaultVoice,
+  hasOwnVoices,
+  SPEECH_LANGUAGES,
+} from "../../utils/speech";
 
 /**
  * Full screen live mode: hands free voice conversation plus an optional
@@ -219,6 +224,11 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
                 ))}
               </select>
             </div>
+            {!hasOwnVoices(settings.language) && (
+              <p className="text-center text-xs text-tertiary">
+                {t("live_mode.voice_fallback")}
+              </p>
+            )}
           </div>
 
           <LiveTranscript messages={localState.messages} />

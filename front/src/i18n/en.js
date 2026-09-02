@@ -68,6 +68,8 @@ export default {
     no_observations: "Observations appear here once you share a camera or screen.",
     transcript: "Conversation",
     no_transcript: "Your spoken turns are added to this conversation.",
+    voice_fallback:
+      "There is no voice for this language, replies are read by an English voice.",
     you: "You",
     assistant: "Assistant",
   },

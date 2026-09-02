@@ -69,6 +69,8 @@ export default {
       "Beobachtungen erscheinen hier, sobald Sie Kamera oder Bildschirm teilen.",
     transcript: "Unterhaltung",
     no_transcript: "Ihre gesprochenen Beiträge werden dieser Unterhaltung hinzugefügt.",
+    voice_fallback:
+      "Für diese Sprache gibt es keine Stimme, Antworten werden von einer englischen Stimme gelesen.",
     you: "Sie",
     assistant: "Assistent",
   },

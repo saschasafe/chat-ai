@@ -1,8 +1,10 @@
+import { getDefaultVoice, getSpeechModel } from "../utils/speech";
+
 // Text to speech through the Chat AI backend proxy
 export async function synthesizeSpeech({
   text,
-  voice = "bf_alice",
-  model = "speaches-ai/Kokoro-82M-v1.0-ONNX",
+  voice = getDefaultVoice("en"),
+  model = getSpeechModel(),
   speed = null,
   signal = null,
 }) {

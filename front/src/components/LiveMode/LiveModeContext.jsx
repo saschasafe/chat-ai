@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getDefaultVoice } from "../../utils/speech";
+import { getDefaultVoice, getVoicesForLanguage } from "../../utils/speech";
 
 const STORAGE_KEY = "chat-ai-live-mode-settings";
 
@@ -16,7 +16,13 @@ export const DEFAULT_LIVE_SETTINGS = {
 function loadSettings() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return { ...DEFAULT_LIVE_SETTINGS, ...stored };
+    const settings = { ...DEFAULT_LIVE_SETTINGS, ...stored };
+    // A stored voice may no longer exist, fall back instead of failing silently
+    const available = getVoicesForLanguage(settings.language);
+    if (!available.some((voice) => voice.id === settings.voice)) {
+      settings.voice = getDefaultVoice(settings.language);
+    }
+    return settings;
   } catch {
     return { ...DEFAULT_LIVE_SETTINGS };
   }
