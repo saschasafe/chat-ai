@@ -72,6 +72,7 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
     setLocalState,
     language: settings.language,
     voice: settings.voice,
+    audioDeviceId: settings.audioDeviceId,
     getVisionContext,
     onError: reportError,
   });
@@ -148,6 +149,11 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
             <p className="text-center text-sm text-tertiary">
               {t(`live_mode.hint_${live.status}`)}
             </p>
+            {live.lastError && (
+              <p className="text-center text-sm text-red-600 dark:text-red-400">
+                {t("live_mode.voice_error", { error: live.lastError })}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center justify-center gap-2">
               {live.isActive ? (
@@ -223,6 +229,36 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
                   </option>
                 ))}
               </select>
+            </div>
+            {/* Microphone picker, disabled while the mic is in use */}
+            <div className="flex w-full max-w-xs flex-col gap-1 text-sm">
+              <label
+                className="text-xs text-tertiary"
+                htmlFor="live-mode-microphone"
+              >
+                {t("live_mode.microphone")}
+              </label>
+              <select
+                id="live-mode-microphone"
+                className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-bg_dark dark:text-white"
+                value={settings.audioDeviceId}
+                disabled={live.isActive}
+                onChange={(event) =>
+                  updateSettings({ audioDeviceId: event.target.value })
+                }
+              >
+                <option value="">{t("live_mode.default_microphone")}</option>
+                {(live.devices || []).map((device, index) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label || `${t("live_mode.microphone")} ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+              {live.isActive && (
+                <p className="text-xs text-tertiary">
+                  {t("live_mode.microphone_locked")}
+                </p>
+              )}
             </div>
             {!hasOwnVoices(settings.language) && (
               <p className="text-center text-xs text-tertiary">

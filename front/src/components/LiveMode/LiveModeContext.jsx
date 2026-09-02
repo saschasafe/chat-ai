@@ -6,6 +6,7 @@ const STORAGE_KEY = "chat-ai-live-mode-settings";
 export const DEFAULT_LIVE_SETTINGS = {
   language: "en",
   voice: getDefaultVoice("en"),
+  audioDeviceId: "",
   visionEnabled: false,
   visionModel: "",
   source: "camera", // "camera" | "screen"

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { convertToWav } from "../utils/attachments";
 
 // Levels are time domain RMS, so roughly 0.05 to 0.25 for normal speech and
 // well under 0.01 for a quiet room.
@@ -16,6 +15,7 @@ const LEVEL_DECAY = 0.82; // Smooths the meter so the orb does not flicker
 export function useVoiceRecorder({
   onComplete,
   onError,
+  deviceId = "",
   silenceMs = 1200,
   maxDurationMs = 60000,
   minDurationMs = 400,
@@ -23,6 +23,7 @@ export function useVoiceRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const [level, setLevel] = useState(0);
   const [hasSpeech, setHasSpeech] = useState(false);
+  const [devices, setDevices] = useState([]);
 
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -48,6 +49,24 @@ export function useVoiceRecorder({
     onCompleteRef.current = onComplete;
     onErrorRef.current = onError;
   }, [onComplete, onError]);
+
+  // Labels are only exposed once microphone permission has been granted
+  const refreshDevices = useCallback(async () => {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      setDevices(all.filter((device) => device.kind === "audioinput"));
+    } catch {
+      setDevices([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshDevices();
+    const onChange = () => refreshDevices();
+    navigator.mediaDevices?.addEventListener?.("devicechange", onChange);
+    return () =>
+      navigator.mediaDevices?.removeEventListener?.("devicechange", onChange);
+  }, [refreshDevices]);
 
   const teardown = useCallback(() => {
     if (frameRef.current) {
@@ -111,9 +130,12 @@ export function useVoiceRecorder({
           noiseSuppression: true,
           autoGainControl: true,
           channelCount: 1,
+          ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
         },
       });
       streamRef.current = stream;
+      // Device labels become readable now that permission was granted
+      refreshDevices();
       cancelledRef.current = false;
       forcedRef.current = false;
       chunksRef.current = [];
@@ -130,12 +152,14 @@ export function useVoiceRecorder({
       analyserRef.current = analyser;
       dataArrayRef.current = new Uint8Array(analyser.fftSize);
 
+      // The transcription endpoint accepts webm, mp4 and wav alike, so the
+      // native recording is sent as is instead of being re-encoded.
       let mimeType = "audio/webm";
       for (const candidate of [
-        "audio/wav",
         "audio/webm;codecs=opus",
         "audio/webm",
         "audio/mp4",
+        "audio/ogg;codecs=opus",
       ]) {
         if (MediaRecorder.isTypeSupported(candidate)) {
           mimeType = candidate;
@@ -160,15 +184,9 @@ export function useVoiceRecorder({
 
         if (wasCancelled || !spoke || chunks.length === 0) return;
 
-        try {
-          const blob = new Blob(chunks, { type: mimeTypeRef.current });
-          const wavBlob = mimeTypeRef.current.includes("wav")
-            ? blob
-            : await convertToWav(blob);
-          onCompleteRef.current?.(wavBlob);
-        } catch (error) {
-          onErrorRef.current?.(error);
-        }
+        const blob = new Blob(chunks, { type: mimeTypeRef.current });
+        if (blob.size === 0) return;
+        onCompleteRef.current?.(blob);
       };
 
       startedAtRef.current = Date.now();
@@ -232,7 +250,7 @@ export function useVoiceRecorder({
       setIsRecording(false);
       onErrorRef.current?.(error);
     }
-  }, [maxDurationMs, minDurationMs, silenceMs, stop, teardown]);
+  }, [deviceId, maxDurationMs, minDurationMs, refreshDevices, silenceMs, stop, teardown]);
 
   // Release the microphone if the component goes away mid recording
   useEffect(() => {
@@ -245,5 +263,14 @@ export function useVoiceRecorder({
     };
   }, [teardown]);
 
-  return { isRecording, level, hasSpeech, start, stop, cancel };
+  return {
+    isRecording,
+    level,
+    hasSpeech,
+    devices,
+    refreshDevices,
+    start,
+    stop,
+    cancel,
+  };
 }

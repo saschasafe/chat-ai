@@ -456,4 +456,4 @@ const pasteAttachments = async ({
     }
 };
 
-export { addAttachments, addAudioAttachment, pasteAttachments, convertToWav };
+export { addAttachments, addAudioAttachment, pasteAttachments };

@@ -16,6 +16,7 @@ export function useLiveConversation({
   setLocalState,
   language = "en",
   voice,
+  audioDeviceId = "",
   sttModel = "whisper-large-v2",
   ttsModel,
   getVisionContext = null,
@@ -26,6 +27,7 @@ export function useLiveConversation({
   const [isActive, setIsActive] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | listening | transcribing | thinking | speaking
   const [lastTranscript, setLastTranscript] = useState("");
+  const [lastError, setLastError] = useState(null);
 
   const isActiveRef = useRef(false);
   const awaitingIndexRef = useRef(null);
@@ -41,6 +43,7 @@ export function useLiveConversation({
 
   const reportError = useCallback((error) => {
     console.error("Live mode error:", error);
+    setLastError(error?.message || String(error));
     onErrorRef.current?.(error);
   }, []);
 
@@ -107,6 +110,7 @@ export function useLiveConversation({
   );
 
   const recorder = useVoiceRecorder({
+    deviceId: audioDeviceId,
     onComplete: handleRecording,
     onError: (error) => {
       reportError(error);
@@ -163,6 +167,7 @@ export function useLiveConversation({
   }, [localState.messages, speak, ttsModel, voice]);
 
   const start = useCallback(() => {
+    setLastError(null);
     isActiveRef.current = true;
     setIsActive(true);
     startListening();
@@ -201,8 +206,10 @@ export function useLiveConversation({
     status,
     level: recorder.level,
     isRecording: recorder.isRecording,
+    devices: recorder.devices,
     isSpeaking,
     lastTranscript,
+    lastError,
     start,
     stop,
     interrupt,
