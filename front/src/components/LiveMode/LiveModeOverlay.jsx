@@ -254,6 +254,11 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
                   </option>
                 ))}
               </select>
+              {live.deviceFallback && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {t("live_mode.microphone_fallback")}
+                </p>
+              )}
               {live.isActive && (
                 <p className="text-xs text-tertiary">
                   {t("live_mode.microphone_locked")}

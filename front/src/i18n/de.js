@@ -59,6 +59,8 @@ export default {
     microphone: "Mikrofon",
     default_microphone: "Standardmikrofon",
     microphone_locked: "Stoppen Sie den Sprachmodus, um das Mikrofon zu wechseln.",
+    microphone_fallback:
+      "Das gewählte Mikrofon war nicht verfügbar, es wird das Standardmikrofon verwendet.",
     voice_error: "Sprachmodus fehlgeschlagen: {{error}}",
     start_vision: "Teilen",
     stop_vision: "Teilen beenden",

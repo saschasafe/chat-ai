@@ -59,6 +59,8 @@ export default {
     microphone: "Microphone",
     default_microphone: "Default microphone",
     microphone_locked: "Stop the voice loop to switch microphone.",
+    microphone_fallback:
+      "The selected microphone was unavailable, the default one is in use.",
     voice_error: "Voice loop failed: {{error}}",
     start_vision: "Share",
     stop_vision: "Stop sharing",

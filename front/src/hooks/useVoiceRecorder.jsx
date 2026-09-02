@@ -6,6 +6,64 @@ const SPEECH_THRESHOLD = 0.03; // Above this we assume speech
 const NOISE_FLOOR = 0.012; // Below this we treat the input as silence
 const LEVEL_DECAY = 0.82; // Smooths the meter so the orb does not flicker
 
+// Give up on a take that never contained any speech, so a microphone that
+// stays silent cannot hold the turn open until the hard cap.
+const NO_SPEECH_TIMEOUT_MS = 10000;
+
+/**
+ * Level below which the input counts as silence.
+ *
+ * A headset with gain control can idle well above a fixed noise floor, so the
+ * quietest moment of the current take sets the bar. It is capped below the
+ * speech threshold so a loud room can never raise it far enough to cut speech
+ * off mid sentence.
+ */
+export function silenceLevelFor(quietest) {
+  return Math.min(
+    Math.max(NOISE_FLOOR, quietest * 2),
+    SPEECH_THRESHOLD * 0.8
+  );
+}
+
+/** Whether the current take should end. Pure, so the timing is testable. */
+export function shouldEndTake({
+  hasSpeech,
+  level,
+  silenceLevel,
+  elapsed,
+  quietFor,
+  silenceMs,
+  minDurationMs,
+  maxDurationMs,
+}) {
+  if (elapsed > maxDurationMs) return "cap";
+  // Nothing was ever said, so do not hold the turn open
+  if (!hasSpeech) return elapsed > NO_SPEECH_TIMEOUT_MS ? "no-speech" : false;
+  if (elapsed <= minDurationMs) return false;
+  if (level < silenceLevel && quietFor > silenceMs) return "silence";
+  return false;
+}
+
+// getUserMedia errors are unreadable on their own, so map the ones a user can
+// actually act on.
+function describeMediaError(error) {
+  switch (error?.name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return new Error(
+        "Microphone access was blocked. Allow the microphone for this site and try again."
+      );
+    case "NotFoundError":
+      return new Error("No microphone was found.");
+    case "NotReadableError":
+      return new Error(
+        "The microphone is already in use by another application."
+      );
+    default:
+      return error;
+  }
+}
+
 /**
  * Microphone recorder with voice activity detection.
  *
@@ -14,6 +72,7 @@ const LEVEL_DECAY = 0.82; // Smooths the meter so the orb does not flicker
  */
 export function useVoiceRecorder({
   onComplete,
+  onDiscard,
   onError,
   deviceId = "",
   silenceMs = 1200,
@@ -24,6 +83,7 @@ export function useVoiceRecorder({
   const [level, setLevel] = useState(0);
   const [hasSpeech, setHasSpeech] = useState(false);
   const [devices, setDevices] = useState([]);
+  const [deviceFallback, setDeviceFallback] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -40,15 +100,18 @@ export function useVoiceRecorder({
   const cancelledRef = useRef(false);
   const forcedRef = useRef(false);
   const smoothedLevelRef = useRef(0);
+  const quietestRef = useRef(Infinity);
   const mimeTypeRef = useRef("audio/webm");
 
   // Keep the latest callbacks without restarting the analyser loop
   const onCompleteRef = useRef(onComplete);
+  const onDiscardRef = useRef(onDiscard);
   const onErrorRef = useRef(onError);
   useEffect(() => {
     onCompleteRef.current = onComplete;
+    onDiscardRef.current = onDiscard;
     onErrorRef.current = onError;
-  }, [onComplete, onError]);
+  }, [onComplete, onDiscard, onError]);
 
   // Labels are only exposed once microphone permission has been granted
   const refreshDevices = useCallback(async () => {
@@ -123,16 +186,39 @@ export function useVoiceRecorder({
       return;
     }
 
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+    };
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-          ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-        },
-      });
+      let stream;
+      let usedFallback = false;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: deviceId
+            ? { ...audioConstraints, deviceId: { exact: deviceId } }
+            : audioConstraints,
+        });
+      } catch (error) {
+        // Browsers rotate device ids between sessions, and an exact match on a
+        // stale id is rejected outright without even asking for permission.
+        // Falling back to the default device keeps the loop usable.
+        const isDeviceMiss =
+          error?.name === "OverconstrainedError" ||
+          error?.name === "NotFoundError";
+        if (!deviceId || !isDeviceMiss) throw error;
+        console.warn(
+          "Selected microphone is no longer available, using the default device."
+        );
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraints,
+        });
+        usedFallback = true;
+      }
+      setDeviceFallback(usedFallback);
       streamRef.current = stream;
       // Device labels become readable now that permission was granted
       refreshDevices();
@@ -141,10 +227,18 @@ export function useVoiceRecorder({
       chunksRef.current = [];
       hasSpeechRef.current = false;
       smoothedLevelRef.current = 0;
+      quietestRef.current = Infinity;
       setHasSpeech(false);
 
       // Level metering + voice activity detection
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      // The context is built after the getUserMedia await, so the click that
+      // started the loop no longer counts as a gesture and the context comes
+      // up suspended. A suspended context never clocks the analyser, which
+      // would freeze the level meter and with it the silence detection.
+      if (audioContext.state === "suspended") {
+        await audioContext.resume().catch(() => {});
+      }
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 1024;
       audioContext.createMediaStreamSource(stream).connect(analyser);
@@ -182,10 +276,18 @@ export function useVoiceRecorder({
         chunksRef.current = [];
         teardown();
 
-        if (wasCancelled || !spoke || chunks.length === 0) return;
+        if (wasCancelled) return;
 
-        const blob = new Blob(chunks, { type: mimeTypeRef.current });
-        if (blob.size === 0) return;
+        // Nothing usable was captured. Report it so the caller can reopen the
+        // microphone instead of leaving the loop stalled on a dead turn.
+        const blob =
+          chunks.length > 0
+            ? new Blob(chunks, { type: mimeTypeRef.current })
+            : null;
+        if (!spoke || !blob || blob.size === 0) {
+          onDiscardRef.current?.();
+          return;
+        }
         onCompleteRef.current?.(blob);
       };
 
@@ -216,6 +318,8 @@ export function useVoiceRecorder({
         );
         setLevel(smoothedLevelRef.current);
 
+        quietestRef.current = Math.min(quietestRef.current, normalized);
+
         const now = Date.now();
         if (normalized > SPEECH_THRESHOLD) {
           lastSpeechAtRef.current = now;
@@ -225,18 +329,17 @@ export function useVoiceRecorder({
           }
         }
 
-        const elapsed = now - startedAtRef.current;
-        const quietFor = now - lastSpeechAtRef.current;
-        const longEnough = elapsed > minDurationMs;
-
-        // End the turn once the speaker went quiet, or when the cap is reached
-        if (
-          (hasSpeechRef.current &&
-            longEnough &&
-            normalized < NOISE_FLOOR &&
-            quietFor > silenceMs) ||
-          elapsed > maxDurationMs
-        ) {
+        const reason = shouldEndTake({
+          hasSpeech: hasSpeechRef.current,
+          level: normalized,
+          silenceLevel: silenceLevelFor(quietestRef.current),
+          elapsed: now - startedAtRef.current,
+          quietFor: now - lastSpeechAtRef.current,
+          silenceMs,
+          minDurationMs,
+          maxDurationMs,
+        });
+        if (reason) {
           stop();
           return;
         }
@@ -248,7 +351,7 @@ export function useVoiceRecorder({
       teardown();
       isRecordingRef.current = false;
       setIsRecording(false);
-      onErrorRef.current?.(error);
+      onErrorRef.current?.(describeMediaError(error));
     }
   }, [deviceId, maxDurationMs, minDurationMs, refreshDevices, silenceMs, stop, teardown]);
 
@@ -268,6 +371,7 @@ export function useVoiceRecorder({
     level,
     hasSpeech,
     devices,
+    deviceFallback,
     refreshDevices,
     start,
     stop,

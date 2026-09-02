@@ -112,6 +112,11 @@ export function useLiveConversation({
   const recorder = useVoiceRecorder({
     deviceId: audioDeviceId,
     onComplete: handleRecording,
+    // The take held nothing usable, so take the turn again
+    onDiscard: () => {
+      if (isActiveRef.current) startListening();
+      else setStatus("idle");
+    },
     onError: (error) => {
       reportError(error);
       setStatus("idle");
@@ -207,6 +212,7 @@ export function useLiveConversation({
     level: recorder.level,
     isRecording: recorder.isRecording,
     devices: recorder.devices,
+    deviceFallback: recorder.deviceFallback,
     isSpeaking,
     lastTranscript,
     lastError,
