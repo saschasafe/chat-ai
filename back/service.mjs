@@ -435,8 +435,8 @@ app.post("/audio/transcriptions", async (req, res) => {
       contentType: file.mimetype || "audio/wav",
     });
     formData.append("model", model);
-    // Always ask for plain text, the caller only needs the transcript
-    formData.append("response_format", "text");
+    // "text" comes back JSON encoded, including the surrounding quotes
+    formData.append("response_format", "json");
     if (language) formData.append("language", language);
 
     const response = await fetch(apiEndpoint + "/audio/transcriptions", {
@@ -445,12 +445,21 @@ app.post("/audio/transcriptions", async (req, res) => {
       body: formData,
     });
 
-    const text = await response.text();
+    const body = await response.text();
     if (!response.ok) {
-      console.error("Transcription error:", response.status, text);
-      return res.status(response.status).json({ error: text || response.statusText });
+      console.error("Transcription error:", response.status, body);
+      return res.status(response.status).json({ error: body || response.statusText });
     }
-    return res.status(200).json({ text: text.trim() });
+
+    let text = body;
+    try {
+      const parsed = JSON.parse(body);
+      // Accept both { text } and a bare JSON string
+      text = typeof parsed === "string" ? parsed : parsed?.text ?? "";
+    } catch {
+      // Not JSON, use the body as it came
+    }
+    return res.status(200).json({ text: String(text).trim() });
   } catch (err) {
     console.error("Transcription error:", err);
     return res.status(500).json({ error: "Failed to transcribe audio" });
