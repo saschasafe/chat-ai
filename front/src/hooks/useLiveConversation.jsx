@@ -28,6 +28,8 @@ export function useLiveConversation({
   const [status, setStatus] = useState("idle"); // idle | listening | transcribing | thinking | speaking
   const [lastTranscript, setLastTranscript] = useState("");
   const [lastError, setLastError] = useState(null);
+  // Translation key for a spent turn that was not worth sending
+  const [lastWarning, setLastWarning] = useState(null);
 
   const isActiveRef = useRef(false);
   const awaitingIndexRef = useRef(null);
@@ -49,11 +51,7 @@ export function useLiveConversation({
 
   const { isSpeaking, speak, stop: stopSpeaking } = useSpeechPlayback({
     onError: reportError,
-    onFinished: () => {
-      // Reopen the mic for the next turn
-      if (isActiveRef.current) startListening();
-      else setStatus("idle");
-    },
+    onFinished: () => nextTurn(),
   });
 
   // Put the transcript into the pending user message, then let the effect send
@@ -94,15 +92,16 @@ export function useLiveConversation({
           language,
         });
         if (!text) {
-          // Nothing intelligible, just listen again
-          if (isActiveRef.current) startListening();
+          // Nothing intelligible came back, so hand the turn back
+          setLastWarning("nothing_understood");
+          nextTurn();
           return;
         }
         setLastTranscript(text);
         submitTranscript(text);
       } catch (error) {
         reportError(error);
-        if (isActiveRef.current) startListening();
+        nextTurn();
       }
     },
     // startListening is defined below and stable through the recorder ref
@@ -112,10 +111,11 @@ export function useLiveConversation({
   const recorder = useVoiceRecorder({
     deviceId: audioDeviceId,
     onComplete: handleRecording,
-    // The take held nothing usable, so take the turn again
-    onDiscard: () => {
-      if (isActiveRef.current) startListening();
-      else setStatus("idle");
+    // The take held nothing usable, so say why and hand the turn back
+    onDiscard: (reason) => {
+      if (reason === "no-input") setLastWarning("no_input");
+      else if (reason === "no-speech") setLastWarning("nothing_understood");
+      nextTurn();
     },
     onError: (error) => {
       reportError(error);
@@ -131,8 +131,16 @@ export function useLiveConversation({
   }, [recorder]);
 
   function startListening() {
+    setLastWarning(null);
     setStatus("listening");
     recorderRef.current.start();
+  }
+
+  // Reopen the microphone once a take is spent, or fall idle if the loop
+  // was stopped in the meantime
+  function nextTurn() {
+    if (isActiveRef.current) startListening();
+    else setStatus("idle");
   }
 
   // Send once localState carries the transcript
@@ -159,12 +167,12 @@ export function useLiveConversation({
       ? content.find((item) => item.type === "text")?.text || ""
       : content || "";
 
-    if (!isActiveRef.current) {
-      setStatus("idle");
+    if (!text.trim()) {
+      nextTurn();
       return;
     }
-    if (!text.trim()) {
-      startListening();
+    if (!isActiveRef.current) {
+      setStatus("idle");
       return;
     }
     setStatus("speaking");
@@ -173,6 +181,7 @@ export function useLiveConversation({
 
   const start = useCallback(() => {
     setLastError(null);
+    setLastWarning(null);
     isActiveRef.current = true;
     setIsActive(true);
     startListening();
@@ -190,12 +199,12 @@ export function useLiveConversation({
   // Cut the reply short and take the next turn immediately
   const interrupt = useCallback(() => {
     stopSpeaking();
-    if (isActiveRef.current) startListening();
-    else setStatus("idle");
+    nextTurn();
   }, [stopSpeaking]);
 
-  // Force the current turn to end without waiting for the silence timeout.
-  // `force` submits the take even if the detector never flagged speech.
+  // End the current take and send it. `force` submits even when the detector
+  // never flagged speech, so quiet talkers are not silently dropped, but a
+  // take with no signal at all is still held back by the recorder.
   const endTurn = useCallback(() => {
     recorderRef.current.stop({ force: true });
   }, []);
@@ -216,6 +225,7 @@ export function useLiveConversation({
     isSpeaking,
     lastTranscript,
     lastError,
+    lastWarning,
     start,
     stop,
     interrupt,

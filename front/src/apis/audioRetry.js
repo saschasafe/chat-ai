@@ -2,8 +2,10 @@
 // model is cold. A single failure would otherwise break a whole live turn.
 const RETRY_DELAYS = [400, 900];
 
+// 429 is deliberately not retried: retrying a rate limit within a second only
+// deepens it, and the next spoken turn is a natural retry anyway.
 export function isRetryableStatus(status) {
-  return status >= 500 || status === 408 || status === 429;
+  return status >= 500 || status === 408;
 }
 
 const wait = (ms, signal) =>

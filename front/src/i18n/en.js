@@ -53,6 +53,11 @@ export default {
     stop_voice: "Stop",
     interrupt: "Skip reply",
     end_turn: "Send now",
+    input_level: "Microphone level",
+    warning_no_input:
+      "The microphone delivered no sound at all. Check that it is not muted and that the right device is selected.",
+    warning_nothing_understood:
+      "Nothing could be made out in that recording. Try again a little louder.",
     source_camera: "Camera",
     source_screen: "Screen",
     default_camera: "Default camera",

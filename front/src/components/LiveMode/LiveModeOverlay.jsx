@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Mic, Square, SkipForward, X } from "lucide-react";
+import { Mic, Send, Square, SkipForward, X } from "lucide-react";
 
 import VisionPanel from "./VisionPanel";
 import VoiceOrb from "./VoiceOrb";
@@ -149,9 +149,31 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
             <p className="text-center text-sm text-tertiary">
               {t(`live_mode.hint_${live.status}`)}
             </p>
+
+            {/* A live meter, so a muted or wrong microphone is obvious at once */}
+            {live.isRecording && (
+              <div className="w-full max-w-xs">
+                <div
+                  className="h-1.5 w-full overflow-hidden rounded-full bg-gray-300 dark:bg-gray-600"
+                  role="meter"
+                  aria-label={t("live_mode.input_level")}
+                >
+                  <div
+                    className="h-full rounded-full bg-[#009EE0] transition-[width] duration-75"
+                    style={{ width: `${Math.min(live.level * 300, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {live.lastError && (
               <p className="text-center text-sm text-red-600 dark:text-red-400">
                 {t("live_mode.voice_error", { error: live.lastError })}
+              </p>
+            )}
+            {live.lastWarning && (
+              <p className="text-center text-sm text-amber-600 dark:text-amber-400">
+                {t(`live_mode.warning_${live.lastWarning}`)}
               </p>
             )}
 
@@ -182,7 +204,7 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
                       onClick={live.endTurn}
                       disabled={!live.isRecording}
                     >
-                      <SkipForward className="h-4 w-4" />
+                      <Send className="h-4 w-4" />
                       {t("live_mode.end_turn")}
                     </button>
                   )}

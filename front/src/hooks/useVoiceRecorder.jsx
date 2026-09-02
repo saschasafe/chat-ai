@@ -6,6 +6,12 @@ const SPEECH_THRESHOLD = 0.03; // Above this we assume speech
 const NOISE_FLOOR = 0.012; // Below this we treat the input as silence
 const LEVEL_DECAY = 0.82; // Smooths the meter so the orb does not flicker
 
+// Roughly -60 dBFS. Even a muted room sits above this, so a take that never
+// crosses it carries no signal at all: a muted headset, the wrong device, or a
+// track the OS never fed. Transcribing digital silence only earns an upstream
+// error, so such a take is reported instead of sent.
+const SILENT_INPUT_LEVEL = 0.001;
+
 // Give up on a take that never contained any speech, so a microphone that
 // stays silent cannot hold the turn open until the hard cap.
 const NO_SPEECH_TIMEOUT_MS = 10000;
@@ -101,6 +107,7 @@ export function useVoiceRecorder({
   const forcedRef = useRef(false);
   const smoothedLevelRef = useRef(0);
   const quietestRef = useRef(Infinity);
+  const peakRef = useRef(0);
   const mimeTypeRef = useRef("audio/webm");
 
   // Keep the latest callbacks without restarting the analyser loop
@@ -228,6 +235,7 @@ export function useVoiceRecorder({
       hasSpeechRef.current = false;
       smoothedLevelRef.current = 0;
       quietestRef.current = Infinity;
+      peakRef.current = 0;
       setHasSpeech(false);
 
       // Level metering + voice activity detection
@@ -271,21 +279,35 @@ export function useVoiceRecorder({
 
       recorder.onstop = async () => {
         const wasCancelled = cancelledRef.current;
-        const spoke = hasSpeechRef.current || forcedRef.current;
+        const spoke = hasSpeechRef.current;
+        const forced = forcedRef.current;
+        const peak = peakRef.current;
         const chunks = chunksRef.current;
         chunksRef.current = [];
         teardown();
 
         if (wasCancelled) return;
 
-        // Nothing usable was captured. Report it so the caller can reopen the
-        // microphone instead of leaving the loop stalled on a dead turn.
+        // Nothing usable was captured. Report why, so the caller can reopen the
+        // microphone or tell the user, instead of stalling on a dead turn.
         const blob =
           chunks.length > 0
             ? new Blob(chunks, { type: mimeTypeRef.current })
             : null;
-        if (!spoke || !blob || blob.size === 0) {
-          onDiscardRef.current?.();
+        if (!blob || blob.size === 0) {
+          onDiscardRef.current?.("empty");
+          return;
+        }
+        // The track carried no signal at all, so the take is digital silence.
+        // Uploading it is pointless and the endpoint rejects it outright.
+        if (peak < SILENT_INPUT_LEVEL) {
+          onDiscardRef.current?.("no-input");
+          return;
+        }
+        // Quiet but not silent still goes out when the send was deliberate,
+        // the transcriber copes with it far better than the meter does.
+        if (!spoke && !forced) {
+          onDiscardRef.current?.("no-speech");
           return;
         }
         onCompleteRef.current?.(blob);
@@ -319,6 +341,7 @@ export function useVoiceRecorder({
         setLevel(smoothedLevelRef.current);
 
         quietestRef.current = Math.min(quietestRef.current, normalized);
+        peakRef.current = Math.max(peakRef.current, normalized);
 
         const now = Date.now();
         if (normalized > SPEECH_THRESHOLD) {
@@ -353,7 +376,15 @@ export function useVoiceRecorder({
       setIsRecording(false);
       onErrorRef.current?.(describeMediaError(error));
     }
-  }, [deviceId, maxDurationMs, minDurationMs, refreshDevices, silenceMs, stop, teardown]);
+  }, [
+    deviceId,
+    maxDurationMs,
+    minDurationMs,
+    refreshDevices,
+    silenceMs,
+    stop,
+    teardown,
+  ]);
 
   // Release the microphone if the component goes away mid recording
   useEffect(() => {

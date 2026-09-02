@@ -53,6 +53,11 @@ export default {
     stop_voice: "Stopp",
     interrupt: "Antwort überspringen",
     end_turn: "Jetzt senden",
+    input_level: "Mikrofonpegel",
+    warning_no_input:
+      "Das Mikrofon hat überhaupt keinen Ton geliefert. Prüfen Sie, ob es stummgeschaltet ist und ob das richtige Gerät gewählt ist.",
+    warning_nothing_understood:
+      "In dieser Aufnahme war nichts zu verstehen. Versuchen Sie es etwas lauter.",
     source_camera: "Kamera",
     source_screen: "Bildschirm",
     default_camera: "Standardkamera",
