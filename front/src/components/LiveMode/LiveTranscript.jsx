@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+// How far from the bottom still counts as "following along"
+const FOLLOW_THRESHOLD_PX = 48;
+
 function getText(message) {
   const content = message?.content;
   if (typeof content === "string") return content;
@@ -12,7 +15,8 @@ function getText(message) {
 // Live view of the conversation this session is writing into
 export default function LiveTranscript({ messages }) {
   const { t } = useTranslation();
-  const bottomRef = useRef(null);
+  const scrollRef = useRef(null);
+  const isFollowingRef = useRef(true);
 
   const turns = messages
     .map((message, index) => ({ message, index }))
@@ -20,19 +24,34 @@ export default function LiveTranscript({ messages }) {
       ({ message }) =>
         (message.role === "user" || message.role === "assistant") &&
         getText(message).trim() !== ""
-    )
-    .slice(-12);
+    );
 
+  // Follow new turns, but leave the view alone once the user scrolls back to
+  // read something. scrollTop is set directly so no ancestor gets dragged along.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const container = scrollRef.current;
+    if (!container || !isFollowingRef.current) return;
+    container.scrollTop = container.scrollHeight;
   }, [messages]);
 
+  const handleScroll = () => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const distanceToBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    isFollowingRef.current = distanceToBottom <= FOLLOW_THRESHOLD_PX;
+  };
+
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-xl bg-gray-100 p-3 dark:bg-bg_secondary_dark">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-tertiary">
+    <div className="flex min-h-[14rem] flex-1 flex-col rounded-xl bg-gray-100 p-3 dark:bg-bg_secondary_dark">
+      <p className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-tertiary">
         {t("live_mode.transcript")}
       </p>
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="min-h-0 flex-1 overflow-y-auto pr-1"
+      >
         {turns.length === 0 ? (
           <p className="text-sm text-tertiary">{t("live_mode.no_transcript")}</p>
         ) : (

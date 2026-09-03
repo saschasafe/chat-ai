@@ -19,7 +19,8 @@ export default function VisionPanel({
   isRunning,
 }) {
   const { t } = useTranslation();
-  const recent = [...descriptions].slice(-6).reverse();
+  // Newest first, and the whole retained log so the list is worth scrolling
+  const recent = [...descriptions].reverse();
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -99,8 +100,9 @@ export default function VisionPanel({
         </button>
       </div>
 
-      {/* Preview */}
-      <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-black">
+      {/* Preview. Height capped so a wide column cannot squeeze the log away,
+          the video letterboxes itself inside whatever is left. */}
+      <div className="relative aspect-video max-h-[40vh] w-full shrink-0 overflow-hidden rounded-xl bg-black">
         <video
           ref={capture.videoRef}
           className={`h-full w-full object-contain ${
@@ -162,15 +164,16 @@ export default function VisionPanel({
         </p>
       )}
 
-      {/* Rolling observations, newest first */}
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-gray-100 p-3 dark:bg-bg_secondary_dark">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-tertiary">
+      {/* Rolling observations, newest first. The heading stays put while only
+          the list scrolls. */}
+      <div className="flex min-h-[14rem] flex-1 flex-col rounded-xl bg-gray-100 p-3 dark:bg-bg_secondary_dark">
+        <p className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-tertiary">
           {t("live_mode.observations")}
         </p>
         {recent.length === 0 ? (
           <p className="text-sm text-tertiary">{t("live_mode.no_observations")}</p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
             {recent.map((entry) => (
               <li key={entry.at} className="text-sm dark:text-white">
                 <span className="mr-2 text-xs text-tertiary">

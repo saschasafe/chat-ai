@@ -128,7 +128,9 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
       </div>
 
       {/* Body */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 md:grid-cols-2 md:overflow-hidden">
+      {/* The row is pinned to the available height, otherwise it grows with its
+          content and the panels inside never get anything to scroll against */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] md:overflow-hidden">
         {/* Vision half */}
         <VisionPanel
           capture={capture}
@@ -144,7 +146,8 @@ export default function LiveModeOverlay({ localState, setLocalState, modelsData 
 
         {/* Voice half */}
         <div className="flex min-h-0 flex-col gap-3">
-          <div className="flex flex-col items-center gap-3 rounded-xl bg-gray-100 p-4 dark:bg-bg_secondary_dark">
+          {/* Controls keep their natural height, the transcript takes the rest */}
+          <div className="flex shrink-0 flex-col items-center gap-3 rounded-xl bg-gray-100 p-4 dark:bg-bg_secondary_dark">
             <VoiceOrb status={live.status} level={live.level} isActive={live.isActive} />
             <p className="text-center text-sm text-tertiary">
               {t(`live_mode.hint_${live.status}`)}
