@@ -72,13 +72,46 @@ function stripGroundingSpans(text) {
 // An observation describes, it never instructs. These openings mean the model
 // echoed the task back instead of answering it.
 const INSTRUCTION_ECHO =
-  /^(describe|mention|note|report|identify|list|explain|focus|tell|answer|provide|output|summari[sz]e)\b/i;
+  /^(?:please\s+)?(describe|mention|note|report|identify|list|explain|focus|tell|answer|provide|output|summari[sz]e)\b/i;
 
-function dropInstructionEchoes(text) {
-  return text
+// The model saying it has nothing to look at. That is not an observation, and
+// the loop is better off logging nothing than logging a complaint.
+const REFUSAL = /^i\s+(?:cannot|can'?t|am unable|do not|don'?t)\b|^(?:there is )?no image\b/i;
+
+// The model sometimes leaves the tail of a cut off sentence in front of the
+// real answer, such as "out of focus." or "es.". A short opening that starts
+// lowercase is that tail, while a whole description that merely lost its
+// capital letter is long enough to keep.
+const MAX_FRAGMENT_WORDS = 4;
+
+function wordCount(sentence) {
+  return (sentence.match(/[\p{L}\p{N}']+/gu) || []).length;
+}
+
+function isFragment(sentence) {
+  return /^\p{Ll}/u.test(sentence) && wordCount(sentence) <= MAX_FRAGMENT_WORDS;
+}
+
+// A described frame never asks anything. Quoted text is spared, since a
+// question can genuinely be written on a whiteboard.
+function isQuestion(sentence) {
+  return sentence.endsWith("?") && !sentence.includes('"');
+}
+
+function keepObservations(text) {
+  const sentences = text
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence && !INSTRUCTION_ECHO.test(sentence))
+    .filter(Boolean);
+
+  return sentences
+    .filter(
+      (sentence) =>
+        !INSTRUCTION_ECHO.test(sentence) &&
+        !REFUSAL.test(sentence) &&
+        !isQuestion(sentence) &&
+        !isFragment(sentence)
+    )
     .join(" ");
 }
 
@@ -90,8 +123,9 @@ function cleanDescription(raw) {
     .replace(/^[\s\S]*?<\/think>/i, "")
     .trim();
 
-  // Fenced blocks are where these models like to put their JSON
-  text = text.replace(/```[\s\S]*?```/g, " ");
+  // Fenced blocks are where these models like to put their JSON. A fence that
+  // was never closed has to go too, otherwise a bare ``` ends up in the log.
+  text = text.replace(/```[\s\S]*?```/g, " ").replace(/`+/g, " ");
   text = stripGroundingSpans(text);
   // Remnants of an unbalanced object, such as "point": [ L 480, 250
   text = text.replace(
@@ -100,11 +134,19 @@ function cleanDescription(raw) {
   );
   text = text
     .replace(/[{}[\]]/g, " ")
+    // A missing space after a full stop glues two sentences together, as in
+    // "tray.of the frame." Splitting them lets the sentence filter see both.
+    .replace(/([.!?])(?=\p{L})/gu, "$1 ")
     .replace(/\s+/g, " ")
     .trim()
+    // Stray capitals wedged onto a word, as in "officeC chair" or "blackS
+    // black". They come from the model restarting a word mid stream.
+    .replace(/(\p{Ll})\p{Lu}(?=\s|$)/gu, "$1")
+    // ... which leaves the restarted word standing twice
+    .replace(/\b(\p{L}+)(\s+\1)\b/giu, "$1")
     // Leading debris left by a stripped span, like ". Describe..." or "H A man"
     .replace(/^[.,;:!?]+\s*/, "")
-    .replace(/^(?![AI]\s)[A-Za-z]\s+(?=[A-Z])/, "")
+    .replace(/^(?![AI]\s)\p{L}\s+(?=\p{Lu})/u, "")
     .trim();
 
   if (DRAFT_MARKER.test(text)) {
@@ -121,10 +163,14 @@ function cleanDescription(raw) {
     }
   }
 
-  text = dropInstructionEchoes(text.replace(/^["'\s]+|["'\s]+$/g, ""));
+  text = keepObservations(text.replace(/^["'\s]+|["'\s]+$/g, "")).trim();
+
+  // A description that lost its opening capital still reads as one sentence
+  if (text) text = text[0].toUpperCase() + text.slice(1);
+
   // An entry that held nothing but coordinates is now empty, and the caller
   // skips empty results rather than logging a blank line.
-  return text.trim();
+  return text;
 }
 
 // Describe a single captured frame, using the previous descriptions as context
