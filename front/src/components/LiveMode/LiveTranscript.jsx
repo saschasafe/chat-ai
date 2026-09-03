@@ -74,7 +74,6 @@ export default function LiveTranscript({ messages }) {
             ))}
           </ul>
         )}
-        <div ref={bottomRef} />
       </div>
     </div>
   );
