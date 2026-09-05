@@ -2,7 +2,10 @@ name: Deploy to OpenStack
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+      - main
+      - dev
+      - stt-llm-tts+vision
 
 jobs:
   deploy:
@@ -13,13 +16,18 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t myapp:latest .
+          # Tag basierend auf Branch-Namen (z.B. myapp:main, myapp:dev)
+          BRANCH_NAME=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9]/-/g')
+          docker build -t myapp:${BRANCH_NAME} .
 
       - name: Run Docker Container
         run: |
-          docker stop myapp || true
-          docker rm myapp || true
-          docker run -d --name myapp -p 80:80 myapp:latest
+          # Container stoppen/entfernen falls vorhanden
+          docker stop myapp-${{ github.ref_name }} || true
+          docker rm myapp-${{ github.ref_name }} || true
+          
+          # Neuen Container starten (Port 80)
+          docker run -d --name myapp-${{ github.ref_name }} -p 80:80 myapp:${BRANCH_NAME}
 
       - name: Cleanup old images
         run: docker image prune -f
