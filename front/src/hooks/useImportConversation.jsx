@@ -114,13 +114,13 @@ export function useImportConversation() {
     );
   }
 
-  const importConversation = async (data, silent = false) => {
+  const importConversation = async (data, silent = false, topicId = null) => {
     const conversationId = newId();
     try {
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
         for (const c of data.conversations) {
-          importConversation(c);
+          await importConversation(c);
         }
         return;
       }
@@ -316,11 +316,18 @@ export function useImportConversation() {
       if (arcana?.id) settings.arcana = arcana;
 
       // Determine folder assignment
-      let folderId = null;
+      let folderId = topicId;
       const folderRef =
         extractParameter(data, "folderId") ||
         extractParameter(data, "folder_id") ||
-        extractParameter(data, "folder");
+        extractParameter(data, "folder") ||
+        extractParameter(data, "topicId") || 
+        extractParameter(data, "topic_id") || 
+        extractParameter(data, "topic");
+      const folderName =
+          extractParameter(data, "folderName") ||
+          extractParameter(data, "folder_name") ||
+          folderRef?.name;
       if (typeof folderRef === "string") {
         const existing = await getFolder(folderRef);
         folderId = existing?.id ?? null;
@@ -328,14 +335,10 @@ export function useImportConversation() {
         const existing = await getFolder(folderRef.id);
         folderId = existing?.id ?? null;
       }
-      if (!folderId && typeof folderRef?.name === "string") {
-        folderId = await ensureFolder(folderRef.name);
-      }
-      if (!folderId) {
-        const folderName =
-          extractParameter(data, "folderName") ||
-          extractParameter(data, "folder_name");
-        if (typeof folderName === "string") {
+      if (!folderId && typeof folderName === "string") {
+        if (typeof folderRef === "string") {
+          folderId = await ensureFolder(folderName, folderRef);
+        } else {
           folderId = await ensureFolder(folderName);
         }
       }
@@ -347,7 +350,7 @@ export function useImportConversation() {
           title: data?.title || "Imported Conversation",
           messages: sanitizedMessages,
           settings: settings,
-          folderId: folderId ?? null,
+          folderId: folderId ?? "__unsorted__",
         },
       )
 

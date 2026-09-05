@@ -11,14 +11,17 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import ModelSelectorWrapper from "../components/Header/ModelSelectorWrapper";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
-import SettingsWrapper from "../components/SettingsPanel/SettingsWrapper";
 import Conversation from "../components/Conversation/Conversation";
+import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
+import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 import { Navigate, useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
+import LiveModeOverlay from "../components/LiveMode/LiveModeOverlay";
+import { useLiveMode } from "../components/LiveMode/LiveModeContext";
 
 export default function ChatPage() {
   const params = useParams();
@@ -27,11 +30,13 @@ export default function ChatPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isMobile } = useWindowSize();
+  const userSettings = useSelector(selectUserSettings);
 
-  const [localState, setLocalState] = useState(() => getDefaultConversation());
+  const [localState, setLocalState] = useState(() => getDefaultConversation(userSettings));
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const { isOpen: isLiveModeOpen } = useLiveMode();
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({
@@ -49,6 +54,7 @@ export default function ChatPage() {
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
+      <TourManager />
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-hidden">
         <AnnouncementBar />
@@ -66,9 +72,9 @@ export default function ChatPage() {
         className="
           grid
           grid-cols-1 grid-rows-[1fr_auto]
-          md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
+          md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
           md:gap-x-2 gap-y-1 md:pt-1
-          bg-gray-100 dark:bg-bg_dark
+          bg-gray-50 dark:bg-bg_dark
           overflow-hidden
         "
       >
@@ -86,17 +92,19 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <SettingsWrapper
-          localState={localState}
-          setLocalState={setLocalState}
-          userData={userData}
-          modelsData={modelsData}
-        />
-
         <CollapsibleFooter
-          className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4"
+          className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"
         />
       </div>
+
+      {/* Live mode renders here so it can drive the active conversation */}
+      {isLiveModeOpen && (
+        <LiveModeOverlay
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+        />
+      )}
     </div>
   );
 }

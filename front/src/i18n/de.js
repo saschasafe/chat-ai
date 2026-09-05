@@ -3,12 +3,13 @@ export default {
   common: {
     loading: "Lädt...",
     undo: "Rückgängig",
+    scroll: "Nach unten scrollen",
     rename: "Umbenennen",
     create: "Erstellen",
     save: "Speichern",
     import: "Chat importieren",
     export: "Chat exportieren",
-    summarize: "Zusammenfassen und ersetzen",
+    summarize: "Zusammenfassen",
     summarizing: "Zusammenfassen...",
     summarize_success: "Unterhaltung erfolgreich zusammengefasst.",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
@@ -34,6 +35,56 @@ export default {
     skip_backup: "Backup überspringen",
     upgrade_chat_ai: "Chat AI aktualisieren",
   },
+  // Live-Modus: freihändige Sprache plus Webcam oder Bildschirmfreigabe
+  live_mode: {
+    open: "Live-Modus",
+    title: "Live-Modus",
+    status_idle: "Bereit",
+    status_listening: "Hört zu",
+    status_transcribing: "Transkribiert",
+    status_thinking: "Denkt nach",
+    status_speaking: "Spricht",
+    hint_idle: "Starten Sie den Sprachmodus, um freihändig zu sprechen.",
+    hint_listening: "Sprechen Sie, die Aufnahme endet automatisch bei einer Pause.",
+    hint_transcribing: "Sprache wird in Text umgewandelt...",
+    hint_thinking: "Warte auf die Antwort des Modells...",
+    hint_speaking: "Antwort wird vorgelesen. Sie können sie jederzeit überspringen.",
+    start_voice: "Sprechen starten",
+    stop_voice: "Stopp",
+    interrupt: "Antwort überspringen",
+    end_turn: "Jetzt senden",
+    input_level: "Mikrofonpegel",
+    warning_no_input:
+      "Das Mikrofon hat überhaupt keinen Ton geliefert. Prüfen Sie, ob es stummgeschaltet ist und ob das richtige Gerät gewählt ist.",
+    warning_nothing_understood:
+      "In dieser Aufnahme war nichts zu verstehen. Versuchen Sie es etwas lauter.",
+    source_camera: "Kamera",
+    source_screen: "Bildschirm",
+    default_camera: "Standardkamera",
+    microphone: "Mikrofon",
+    default_microphone: "Standardmikrofon",
+    microphone_locked: "Stoppen Sie den Sprachmodus, um das Mikrofon zu wechseln.",
+    microphone_fallback:
+      "Das gewählte Mikrofon war nicht verfügbar, es wird das Standardmikrofon verwendet.",
+    voice_error: "Sprachmodus fehlgeschlagen: {{error}}",
+    start_vision: "Teilen",
+    stop_vision: "Teilen beenden",
+    no_stream: "Noch keine Kamera oder Bildschirmfreigabe",
+    analyzing: "Analysiert",
+    vision_model: "Bildmodell",
+    no_vision_model: "Kein bildfähiges Modell verfügbar",
+    interval: "Alle",
+    vision_error: "Bildanalyse fehlgeschlagen: {{error}}",
+    observations: "Live-Beobachtungen",
+    no_observations:
+      "Beobachtungen erscheinen hier, sobald Sie Kamera oder Bildschirm teilen.",
+    transcript: "Unterhaltung",
+    no_transcript: "Ihre gesprochenen Beiträge werden dieser Unterhaltung hinzugefügt.",
+    voice_fallback:
+      "Für diese Sprache gibt es keine Stimme, Antworten werden von einer englischen Stimme gelesen.",
+    you: "Sie",
+    assistant: "Assistent",
+  },
   feedback:{
     thumbsup:"The response is good.",
     thumbsdown: "The response is not so good.",
@@ -41,7 +92,7 @@ export default {
   },
   // Sidebar
   sidebar: {
-    new_conversation: "Neues Gespräch",
+    new_conversation: "Neuer Chat",
     import_persona: "Mit Persona chatten",
     expand: "Ausklappen",
     extend: "Ausklappen",
@@ -49,30 +100,42 @@ export default {
     close_sidebar: "Seitenleiste schließen",
     rename_tooltip: "Umbenennen: {{title}}",
     shortcut_new_conversation: "Strg + Shift + O",
+    user_section: "Benutzer",
   },
   folders: {
-    title: "Ordner",
+    title: "Chats",
     all: "Alle Chats",
-    uncategorized: "Ohne Ordner",
-    create_button: "Neuer Ordner",
+    uncategorized: "Nicht zugeordnete Chats",
+    create_button: "Neues Thema",
+    empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
     search_action: "Chats durchsuchen",
     search_placeholder: "nach Titel durchsuchen",
     search_no_results: 'Keine Treffer für "{{query}}"',
     clear_search: "Suche löschen",
-    create_title: "Ordner erstellen",
-    rename_title: "Ordner umbenennen",
-    delete_title: "Ordner löschen",
+    create_title: "Thema erstellen",
+    rename_title: "Thema umbenennen",
+    delete_title: "Thema löschen",
     delete_description:
-      'Ordner "{{name}}" löschen? Unterhaltungen bleiben erhalten und erscheinen unter "Alle Chats".',
-    name_label: "Ordnername",
-    name_placeholder: "Ordnername eingeben",
-    error_required: "Bitte einen Ordnernamen eingeben.",
+      'Thema "{{name}}" löschen? Chats bleiben erhalten und erscheinen unter "Nicht zugeordnete Chats".',
+    name_label: "Themenname",
+    name_placeholder: "Themenname eingeben",
+    error_required: "Bitte einen Themennamen eingeben.",
+    create_blurb: "Fassen Sie zusammengehörige Chats in einem Thema zusammen. Konfigurieren Sie den Namen, die Farbe und das Symbol des Themas.",
+    blurb_examples: "Beispiele",
+    suggestion_homework: "Hausaufgaben",
+    suggestion_writing: "Schreiben",
+    suggestion_health: "Gesundheit",
+    suggestion_research: "Forschung",
+    creating: "Wird erstellt…",
+    done: "Fertig",
+    choose_color: "Farbe wählen",
+    choose_icon: "Symbol wählen",
     error_generic: "Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen.",
-    move_title: "Konversation verschieben",
-    move_description: 'Ordner für "{{title}}" auswählen',
+    move_title: "Zu Thema verschieben",
+    move_description: 'Thema für "{{title}}" auswählen',
     move_action: "Verschieben",
-    new_folder_prompt: "Neuen Ordner anlegen",
+    new_folder_prompt: "Neues Thema anlegen",
     create_inline: "Erstellen",
   },
   // Settings panel
@@ -83,9 +146,48 @@ export default {
     web_search_disabled: "Websuche ist deaktiviert",
     close_panel: "Einstellungen schließen",
     system_prompt_placeholder: "System-Prompt hier eingeben",
+    reasoning_effort: {
+      title: "Reasoning",
+      subtitle: "Legen Sie den Reasoning-Aufwand fest",
+      options: {
+        none: {
+            label: "Aus",
+            description: "Reasoning ist deaktiviert"
+        },
+        off: {
+            label: "Aus",
+            description: "Reasoning ist deaktiviert"
+        },
+        on: {
+            label: "An",
+            description: "Reasoning ist aktiviert"
+        },
+        low: {
+            label: "Niedrig",
+            description: "Minimaler Reasoning-Aufwand"
+        },
+        medium: {
+            label: "Mittel",
+            description: "Mittlerer Reasoning-Aufwand"
+        },
+        high: {
+            label: "Hoch",
+            description: "Hoher Reasoning-Aufwand"
+        },
+        xhigh: {
+            label: "Hoch",
+            description: "Hoher Reasoning-Aufwand"
+        },
+        max: {
+            label: "Maximal",
+            description: "Maximaler Reasoning-Aufwand"
+        }
+      }
+    },
     reset_default: "Standard zurücksetzen",
     default: "Standard",
     tools_title: "GWDG-Werkzeuge",
+    chat_settings: "Chat-Einstellungen",
     label_web_search: "Websuche",
     label_image_generation: "Bildgenerierung",
     label_image_modification: "Bildbearbeitung",
@@ -135,7 +237,7 @@ export default {
     references: "Referenzen",
     empty_message:
       "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
-    untitled: "Unbenannte Unterhaltung",
+    untitled: "Unbenannter Chat",
   },
   // Footer
   footer: {
@@ -152,25 +254,104 @@ export default {
   // User Settings Modal
   user_settings: {
     title: "Benutzereinstellungen",
+    tabs: {
+      navigation_label: "Bereiche der Profileinstellungen",
+      profile: {
+        label: "Profil",
+        title: "Profil und Nutzung",
+        description: "Überblick über Ihre Kontodaten und Nutzung.",
+      },
+      chat: {
+        label: "Chat",
+        title: "Chat-Einstellungen",
+        description:
+          "Legen Sie Standards für alle Unterhaltungen auf diesem Gerät fest.",
+      },
+      memories: {
+        label: "Erinnerungen",
+        title: "Gespeicherte Erinnerungen",
+        description:
+          "Prüfen und verwalten Sie die von Chat AI gespeicherten Details.",
+      },
+      data: {
+        label: "Daten",
+        title: "Daten und Datenschutz",
+        description:
+          "Exportieren oder entfernen Sie die in diesem Browser gespeicherten Daten.",
+      },
+    },
+    account: {
+      username: "Benutzername",
+      email: "E-Mail-Adresse",
+    },
+    usage: {
+      title: "Nutzung",
+      description:
+        "Überblick über Ihre monatliche Nutzung und das Organisationsbudget.",
+    },
     monthly_usage: "Monatliche Nutzung",
     org_usage: "Nutzung des Organisationsbudgets",
+    sidebar_usage: {
+      label: "Nutzung in der Seitenleiste anzeigen",
+      description:
+        "Ihre aktuelle Nutzung bleibt beim Chatten in der Seitenleiste sichtbar.",
+    },
+    chat_preferences: {
+      title: "Chat-Einstellungen",
+      description:
+        "Diese Einstellungen gelten für alle Unterhaltungen auf diesem Gerät.",
+      memory: {
+        label: "Erinnerungen",
+        description:
+          "Legen Sie fest, wie Chat AI Ihre gespeicherten Erinnerungen verwendet.",
+        help_label: "Mehr über Erinnerungen erfahren",
+        options: {
+          none: {
+            label: "Keine",
+            description: "Gespeicherte Erinnerungen werden nicht verwendet.",
+          },
+          recall: {
+            label: "Abrufen",
+            description:
+              "Gespeicherte Erinnerungen werden für persönlichere Antworten verwendet.",
+          },
+          learn: {
+            label: "Lernen",
+            description:
+              "Erinnerungen werden verwendet und um relevante neue Details ergänzt.",
+          },
+        },
+      },
+      suggestions: {
+        section_label: "Vorschläge",
+        label: "Folgevorschläge anzeigen",
+        description:
+          "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
+        help_label: "Mehr über Folgevorschläge erfahren",
+      },
+    },
     default_model: {
       title: "Standardmodell",
       current: "Aktuell: {{currentModel}}",
       description: "Wählen Sie das Standardmodell für neue Gespräche aus.",
+      list_label: "Verfügbare Standardmodelle",
     },
     timeout: {
       title: "Wartezeit für Antworten",
       description: "Bestimmen Sie, wie lange auf KI-Antworten gewartet wird.",
       seconds: "Wartezeit (Sekunden)",
+      seconds_short: "Sek.",
       range: "Bereich: 5-900 Sekunden",
     },
     data: {
       title: "Daten verwalten",
-      description: `Hier können Sie alle lokal gespeicherten Daten verwalten. Diese Daten werden nur auf Ihrem Gerät gespeichert.\n\n
-            Das Löschen der Daten führt zum dauerhaften Verlust aller vergangenen Gespräche, Erinnerungen, Einstellungen und Anhänge.`,
+      description:
+        "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
+      export_success: "Lokale Daten wurden erfolgreich exportiert.",
+      export_error: "Lokale Daten konnten nicht exportiert werden.",
     },
     clear_data_button: "Daten löschen",
+    import_data_button: "Daten importieren",
     export_data_button: "Daten exportieren",
     memory: {
       title: "Erinnerungen",
@@ -245,14 +426,14 @@ export default {
   },
   // Rename Conversation Modal
   rename_conversation: {
-    title: "Gespräch umbenennen",
-    enter_name: "Gesprächstitel eingeben",
+    title: "Chat umbenennen",
+    enter_name: "Chat-Titel eingeben",
     alert_empty: "Titel ist erforderlich",
   },
   // Delete Conversation Modal
   delete_conversation: {
-    title: "Gespräch löschen",
-    description: "Sind Sie sicher, dass Sie dieses Gespräch löschen möchten?",
+    title: "Chat löschen",
+    description: "Sind Sie sicher, dass Sie diesen Chat löschen möchten?",
   },
   // Share Settings Modal
   share_settings: {
@@ -266,15 +447,18 @@ export default {
   // Help modals
   help: {
     title: "Hilfe",
-    choiceproposer: "Wenn auf \"On\" gestellt, schlägt das Modell eine Auswahl relevanter Folgeantworten zusammen mit seiner Antwort vor, um Sie bei der Fortführung des Gesprächs zu unterstützen.",
+    choiceproposer:
+      "Wenn diese Option aktiviert ist, zeigt Chat AI nach jeder Antwort passende Folgevorschläge an. Diese Einstellung gilt für alle Unterhaltungen auf diesem Gerät.",
     arcana:
       "Arcana ist eine einzigartige Funktion unseres Dienstes, die das LLM mit spezialisiertem Wissen ausstattet. Wenn Sie eine gültige Arcana-ID und den entsprechenden Schlüssel eingeben, erhält das LLM Zugriff auf das in dieser Arcana enthaltene Wissen. Dies ermöglicht es dem Modell, Antworten zu generieren, die besser informiert und relevanter für Ihre Bedürfnisse sind. Lassen Sie das Feld für die ID leer, um das Modell ohne spezialisiertes Wissen zu verwenden.",
     mcp: "Bitte geben Sie die URL Ihres MCP (Model Context Protocol) Servers ein (z. B. https://...). Der MCP-Server ist ein Dienst, der der Chat-AI zusätzliche Werkzeuge, Datenquellen oder Verarbeitungskapazitäten bereitstellen kann, die über ihr eingebautes Wissen hinausgehen. Durch die Verbindung mit dem angegebenen MCP-Server kann die KI mit externen Systemen interagieren, aktuelle oder spezialisierte Informationen abrufen und benutzerdefinierte Aufgaben entsprechend den angebotenen Funktionen ausführen.",
     models:
       "Chat AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
       Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden. Für weitere Einzelheiten",
+    reasoning:
+      "Die Reasoning-Einstellung bestimmt, wie tief das Modell Informationen verarbeitet und analysiert, bevor es eine Antwort generiert. Ein höherer Reasoning-Aufwand bedeutet, dass das Modell mehr Zeit darauf verwendet, den Kontext sorgfältig zu prüfen, mögliche Interpretationen abzuwägen und seinen internen Denkprozess zu verfeinern, um eine präzisere, differenziertere und besser strukturierte Antwort zu erzeugen. Ein niedrigerer Reasoning-Aufwand priorisiert Geschwindigkeit über Tiefe, was zu schnelleren, aber möglicherweise weniger gründlichen Antworten führt. Passen Sie diese Einstellung an, je nachdem, ob Sie schnelle Antworten oder sorgfältig ausgearbeitete, hochwertige Ergebnisse benötigen.",
     memory:
-      "Memory verbessert die Kontinuität von Gesprächen, indem es den Kontext aus vorherigen Nachrichten speichert. 'None' deaktiviert die Memory-Funktion - jedes Gespräch wird unabhängig behandelt. 'Recall' fügt Memory-Kontext zum System-Prompt hinzu, wodurch die KI auf frühere Teile Ihres Gesprächs verweisen kann. 'Learn' erhaltet auch automatische Memory-Updates. Diese Funktion bietet eine natürlichere Gesprächserfahrung ähnlich anderen KI-Diensten. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
+      "Erinnerungen sind eine globale Einstellung für alle Unterhaltungen auf diesem Gerät. 'Keine' verwendet keine gespeicherten Erinnerungen. 'Abrufen' nutzt gespeicherte Erinnerungen für persönlichere Antworten. 'Lernen' speichert zusätzlich relevante neue Details aus Ihren Unterhaltungen. Erinnerungen werden ausschließlich in Ihrem Browser gespeichert.",
     system_prompt:
       "Der Systemprompt ist ein spezieller Befehl oder eine Anweisung, die zu Beginn eines Gesprächs gegeben wird, um den Ton, den Kontext oder die Einschränkungen für unsere Interaktion festzulegen. Damit wird das Verhalten des Modells gelenkt und sichergestellt, dass es auf hilfreiche und angemessene Weise reagiert.",
     temperature:
@@ -287,6 +471,7 @@ export default {
       "top_p ist ein Schieberegler von 0 bis 1, der den Gesamtbestand der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
   },
   model_selector: {
+    change_model: "Modell wechseln",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
   },
@@ -302,9 +487,9 @@ export default {
     model:
       "Hier können Sie das Modell auswählen, mit dem Sie chatten möchten. Jedes Modell hat seine eigenen Eigenschaften, Fähigkeiten und Einschränkungen.", 
     sidebar:
-      "Hier können Sie Unterhaltungen erstellen, löschen, importieren, exportieren, durchsuchen und zwischen ihnen wechseln. Organisieren Sie Ihre Unterhaltungen in Ordnern und chatten Sie auf Wunsch mit vordefinierten Personas.",
+      "Hier können Sie Unterhaltungen erstellen, löschen, importieren, exportieren, durchsuchen und zwischen ihnen wechseln. Organisieren Sie Ihre Unterhaltungen in Themen und chatten Sie auf Wunsch mit vordefinierten Personas.",
     settings:
-      "Hier können Sie die Unterhaltungseinstellungen anpassen, einschließlich System-Prompt, Temperatur, Top_p und Speichereinstellungen. Lassen Sie sich vom Modell Folge-Prompts vorschlagen und nutzen Sie GWDG‑Tools wie Arcana, Bildgenerierung, Websuche und mehr. Tools funktionieren möglicherweise nicht mit allen Modellen.",
+      "Hier können Sie unterhaltungsspezifische Einstellungen wie System-Prompt, Temperatur, Top_p und GWDG-Tools wie Arcana, Bildgenerierung und Websuche anpassen. Tools funktionieren möglicherweise nicht mit allen Modellen.",
     profile:
       "Diese Schaltfläche öffnet Ihr Benutzerprofil, in dem Sie Ihre Einstellungen festlegen, gespeicherte Erinnerungen verwalten sowie Ihre Daten exportieren oder löschen können.",
     interface:
@@ -331,6 +516,12 @@ export default {
     clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
+    regenerate_confirm:
+      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Um diese Unterhaltung zu behalten, können Sie in einer Kopie dieses Chats fortfahren.",
+    regenerate_yes: "Regenerieren",
+    regenerate_fork: "Kopie",
+    regenerate_fork_success: "Chat erfolgreich geforkt",
+    regenerate_fork_fail: "Chat konnte nicht geforkt werden.",
     summarize_replace:
       "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
     summarize_in_progress:
@@ -339,9 +530,9 @@ export default {
     yes: "Ja, alles löschen",
     system_prompt_empty: "System-Prompt ist leer. Modell reagiert evtl. nicht.",
     data_security_warning: 
-      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet und GWDG-Tools stehen nicht zur Verfügung. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen.",
+      "Sie verwenden ein externes Modell oder externe Tools. Ihre Nachrichten können außerhalb der GWDG verarbeitet werden. Benutzerdefinierte Einstellungen und GWDG-Tools sind möglicherweise nicht verfügbar. Bitte unterlassen Sie die Eingabe vertraulicher oder personenbezogener Daten.",
     data_security_warning_mpg:
-      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet und GWDG-Tools stehen nicht zur Verfügung. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
+      "Sie verwenden ein externes Modell oder externe Tools. Ihre Nachrichten können außerhalb der GWDG verarbeitet werden. Benutzerdefinierte Einstellungen und GWDG-Tools sind möglicherweise nicht verfügbar. Bitte unterlassen Sie die Eingabe vertraulicher oder personenbezogener Daten. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
     data_security_notice: "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen.",
     arcana_usage:
       "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",

@@ -213,7 +213,9 @@ app.post("/chat/completions", async (req, res) => {
     enable_tools = null,
     tools = null,
     stream = true,
-    feedback = null
+    feedback = null,
+    chat_template_kwargs = null,
+    reasoning_effort = null,
   } = req.body;
 
   const mcp_servers = req.body["mcp-servers"] || null;
@@ -251,6 +253,8 @@ app.post("/chat/completions", async (req, res) => {
       stream: stream,
       stream_options: stream ? {include_usage: true } : null,
       timeout: timeout,
+      chat_template_kwargs: chat_template_kwargs,
+      reasoning_effort: reasoning_effort,
     }
 
     const isExternalModel = (model.startsWith("openai-") && !model.startsWith("openai-gpt-oss")) || model.startsWith("claude");
@@ -399,6 +403,66 @@ app.post("/chat/completions", async (req, res) => {
       console.error(err);
       return;
     }
+  }
+});
+
+// Build auth headers, preferring the configured API key over a forwarded inference id
+function buildAuthHeaders(inference_id) {
+  const headers = { "inference-portal": serviceName };
+  if (apiKey) {
+    headers.Authorization = "Bearer " + apiKey;
+  } else if (inference_id) {
+    headers["inference-id"] = inference_id;
+  }
+  return headers;
+}
+
+// Speech to text, used by live mode
+app.post("/audio/transcriptions", async (req, res) => {
+  if (!req.files || !req.files.file) {
+    return res.status(422).json({ error: "No audio file provided" });
+  }
+
+  const inference_id = req.headers["inference-id"];
+  const file = req.files.file;
+  const model = req.body.model || "whisper-large-v2";
+  const language = req.body.language;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file.data, {
+      filename: file.name || "audio.wav",
+      contentType: file.mimetype || "audio/wav",
+    });
+    formData.append("model", model);
+    // "text" comes back JSON encoded, including the surrounding quotes
+    formData.append("response_format", "json");
+    if (language) formData.append("language", language);
+
+    const response = await fetch(apiEndpoint + "/audio/transcriptions", {
+      method: "POST",
+      headers: buildAuthHeaders(inference_id),
+      body: formData,
+    });
+
+    const body = await response.text();
+    if (!response.ok) {
+      console.error("Transcription error:", response.status, body);
+      return res.status(response.status).json({ error: body || response.statusText });
+    }
+
+    let text = body;
+    try {
+      const parsed = JSON.parse(body);
+      // Accept both { text } and a bare JSON string
+      text = typeof parsed === "string" ? parsed : parsed?.text ?? "";
+    } catch {
+      // Not JSON, use the body as it came
+    }
+    return res.status(200).json({ text: String(text).trim() });
+  } catch (err) {
+    console.error("Transcription error:", err);
+    return res.status(500).json({ error: "Failed to transcribe audio" });
   }
 });
 

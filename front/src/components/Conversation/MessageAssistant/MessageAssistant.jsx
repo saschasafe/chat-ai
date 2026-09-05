@@ -6,10 +6,8 @@ import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
 import { RotateCw, GitFork } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
+import { useForkConversation } from "../../../hooks/useForkConversation";
 import MetaBox from "./MetaBox";
-import { useNavigate } from "react-router";
-import { createConversation, newId, saveFile, loadFile } from "../../../db";
-import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
@@ -31,9 +29,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
   
   const sendMessage = useSendMessage();
-  const navigate = useNavigate();
-  const { notifySuccess, notifyError } = useToast();
-  const [forking, setForking] = useState(false);
+  const { forkConversation } = useForkConversation(localState);
   const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
 
   //Functions
@@ -154,109 +150,10 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     });
   };
 
-  const cloneMessageContent = useCallback(
-    async (content, targetConversationId) => {
-      const items = Array.isArray(content)
-        ? content
-        : typeof content === "string"
-          ? [{ type: "text", text: content }]
-          : [];
-      const clonedContent = [];
-      for (const item of items) {
-        if (item?.type === "file" && item?.fileId) {
-          try {
-            const file = await loadFile(item.fileId);
-            if (file) {
-              const newFileId = saveFile(targetConversationId, file);
-              clonedContent.push({ type: "file", fileId: newFileId });
-            }
-          } catch (error) {
-            console.warn("Failed to clone attachment", error);
-          }
-          continue;
-        }
-        if (item?.type) {
-          clonedContent.push({ ...item });
-        } else if (item?.text) {
-          clonedContent.push({ type: "text", text: item.text });
-        } else {
-          clonedContent.push({ type: "text", text: "" });
-        }
-      }
-      if (clonedContent.length === 0) {
-        return [{ type: "text", text: "" }];
-      }
-      return clonedContent;
-    },
-    []
+  const handleForkConversation = useCallback(
+    () => forkConversation(message_index),
+    [forkConversation, message_index]
   );
-
-  const handleForkConversation = useCallback(async () => {
-    if (forking) return;
-    try {
-      setForking(true);
-      const sourceMessages = localState?.messages?.slice(0, message_index + 1) || [];
-      if (sourceMessages.length === 0) {
-        notifyError("Keine Nachrichten zum Forken gefunden.");
-        return;
-      }
-
-      const newConversationId = newId();
-      const forkMessages = [];
-      for (const msg of sourceMessages) {
-        if (!msg?.role) continue;
-        const clonedContent = await cloneMessageContent(msg.content, newConversationId);
-        forkMessages.push({
-          role: msg.role,
-          content: clonedContent,
-          meta: msg.meta,
-          createdAt: msg.createdAt,
-          updatedAt: msg.updatedAt,
-        });
-      }
-
-      if (forkMessages[forkMessages.length - 1]?.role !== "user") {
-        forkMessages.push({
-          role: "user",
-          content: [{ type: "text", text: "" }],
-        });
-      }
-
-      const baseTitle = localState?.title?.trim();
-      const forkTitle = baseTitle
-        ? baseTitle.endsWith(" (Fork)") ? baseTitle : `${baseTitle} (Fork)`
-        : "Forked Conversation";
-
-      const settingsClone = JSON.parse(JSON.stringify(localState?.settings || {}));
-
-      await createConversation({
-        id: newConversationId,
-        title: forkTitle,
-        settings: settingsClone,
-        messages: forkMessages,
-        folderId: localState?.folderId ?? null,
-      });
-
-      notifySuccess("Neue Konversation erstellt.");
-      navigate(`/chat/${newConversationId}`);
-    } catch (error) {
-      console.error("Failed to fork conversation", error);
-      notifyError("Konversation konnte nicht geforkt werden.");
-    } finally {
-      setForking(false);
-    }
-  }, [
-    cloneMessageContent,
-    forking,
-    localState?.folderId,
-    localState?.messages,
-    localState?.settings,
-    localState?.title,
-    message_index,
-    navigate,
-    notifyError,
-    notifySuccess,
-  ]);
 
   const content = message?.content?.[0]?.text ?? "";
   const isContentEmpty = !content.trim();
@@ -265,14 +162,8 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     <div
       key={message_index}
       ref={assistantMessage}
-      className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
-          rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
-          ${editMode ? "px-1 pt-1" : "px-3 pt-3"}
-          ${
-            isContentEmpty && !loading
-              ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0"
-              : " bg-bg_chat dark:bg-bg_chat_dark"
-          }`}
+      className={`text-black dark:text-white overflow-hidden
+          ${editMode ? "px-1 pt-1" : "px-3 pt-3"}`}
     >
       {isContentEmpty ? (
         <div
@@ -411,19 +302,26 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
-                <div className="flex items-center justify-end mb-2 opacity-30 group-hover:opacity-100 transition-opacity duration-300">
+                {/* Buttons on the bottom right */}
+                <div className="flex items-center justify-end gap-3 overflow-hidden">
+                  <CopyButton message={message} />
+                  <SpeakButton message={message} />
+                  <ForkButton handleForkConversation={handleForkConversation} />
+                  <EditButton setEditMode={setEditMode} />
+                  {/* Vertical seperator like | */}
+                  <div className="hidden md:flex w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {/* Render Mode Selector on the bottom left*/}
-                  <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
+                  <div className="hidden md:flex h-6 bg-gray-200 dark:bg-gray-600 dark:bg-gray-700  rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
                     {renderModes.map((mode) => (
                       <button
                         key={mode}
                         onClick={() => !loading && setRenderMode(mode)}
-                        className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
-                    ${loading ? "cursor-not-allowed opacity-20" : ""}
+                        className={`px-2 text-xs font-medium rounded-xl transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+                    ${loading ? "cursor-not-allowed opacity-25" : ""}
                     ${
                       renderMode === mode
-                        ? "bg-tertiary text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        ? "bg-tertiary text-white rounded-xl"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }
                     `}
                         disabled={loading}
@@ -432,6 +330,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                       </button>
                     ))}
                   </div>
+                  { /* Show message metadata */
+                  message?.meta && (<div className="w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>)}
+                  {
+                  message?.meta && (
+                    <MetaBox meta={message.meta} /> 
+                  )}  
                 </div>
 
                 {feedbackModule && (
@@ -443,18 +347,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     sendFeedbackFunc={sendFeedbackFunc}
                   />
                 )}
-                
-                {/* Buttons on the bottom right */}
-                <div className="flex items-center justify-end gap-3 overflow-hidden">
-                  { /* Show message metadata */
-                  message?.meta && (
-                    <MetaBox meta={message.meta} /> 
-                  )}
-                  <EditButton setEditMode={setEditMode} />
-                  <ForkButton handleForkConversation={handleForkConversation} />
-                  <SpeakButton message={message} />
-                  <CopyButton message={message} />
-                </div>
               </div>
             </div>
           )}

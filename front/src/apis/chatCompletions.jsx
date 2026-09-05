@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import getModelDefaults from "../config/getModelDefaults";
+import { createBackendClient } from "./openaiClient";
 
 // Controller for handling API request cancellation
 let controller = new AbortController();
@@ -13,17 +14,7 @@ async function* chatCompletions (
       ? conversation.settings.model
       : conversation.settings.model?.id; // TODO fall back to defaultModel
 
-    // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
-    try {
-      // If absolute, parse directly
-      baseURL = new URL(baseURL).toString();
-    } catch {
-      // If relative, resolve against current origin
-      baseURL = new URL(baseURL, window.location.origin).toString();
-    }
-    
-    
+    const modelDefaults = getModelDefaults(model);
     // Initialize params
     const params = {
       model: model,
@@ -33,6 +24,32 @@ async function* chatCompletions (
       stream: stream,
       stream_options: {include_usage: true },
     };
+
+    // Handle reasoning settings
+    try {
+      if (modelDefaults?.reasoning_effort !== undefined && modelDefaults?.reasoning_effort !== null) {
+        let reasoning_effort = modelDefaults.reasoning_effort;
+        if (conversation.settings?.reasoning_effort !== undefined && conversation.settings?.reasoning_effort !== null) {
+          reasoning_effort = Math.min(conversation.settings.reasoning_effort, modelDefaults.reasoning_options.length - 1)
+        }
+        if (model?.toLowerCase().includes("mistral")) {
+          // Handle models that don't use enable_thinking separately
+          params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
+        }
+        else {
+          if (reasoning_effort == 0) {
+            params.chat_template_kwargs = modelDefaults.reasoning_options[0] == "none" ?
+              {enable_thinking: false} : {reasoning_effort: modelDefaults.reasoning_options[0]};
+          } else if (modelDefaults.reasoning_options[reasoning_effort] == "on") {
+            params.chat_template_kwargs = {enable_thinking: true};
+          } else {
+            params.chat_template_kwargs = {enable_thinking: true, reasoning_effort: modelDefaults.reasoning_options[reasoning_effort]};
+          }
+        }
+      }
+    }  catch {
+      console.warn("Could not find reasoning setting")
+    }
 
     // Handle tools
     if (conversation.settings?.enable_tools) {
@@ -53,12 +70,7 @@ async function* chatCompletions (
     }
 
     // Define openai object to call backend
-    const openai = new OpenAI({
-      baseURL : baseURL,
-      apiKey: null,
-      dangerouslyAllowBrowser: true,
-      timeout: timeout
-    });
+    const openai = createBackendClient(timeout);
 
     // Get chat completion response
     const streamResponse = await openai.chat.completions.create(
@@ -68,7 +80,7 @@ async function* chatCompletions (
 
     if (!stream) {
       const result = streamResponse;
-      console.log("Error:", result);
+      console.error("Error:", result);
       return result;
     }
 
@@ -77,7 +89,7 @@ async function* chatCompletions (
     for await (const chunk of streamResponse) {
       //console.log(chunk);
       if (chunk?.object == "error") {
-        console.log(chunk)
+        console.error(chunk)
           const err = new Error(chunk?.message || "Unknown error");
           err.type = chunk?.type;
           err.status = chunk?.status || chunk?.code;
@@ -102,7 +114,7 @@ async function* chatCompletions (
         }
       }
       catch (err) {
-        console.log("Warning: ", err)
+        console.warn("Warning: ", err)
         console.log(chunk)
         // TODO forward exact error
         // res.status(response.status).send(response.statusText);

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useSelector } from "react-redux";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { processContentItems } from "./sendMessage";
+import packageJson from "../../package.json";
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
@@ -26,6 +27,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     top_p: 0.5,
     memory: 0,
     enable_tools: false,
+    reasoning_effort: null,
     tools: {
       "web_search": false,
       "image_generation": true,
@@ -54,7 +56,7 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
   const now = Date.now();
   return {
     id: uuidv4(),
-    title: "Untitled Conversation",
+    title: "Untitled Chat",
     messageCount: 2,
     messages: [ {
         role: "system",
@@ -164,7 +166,7 @@ export const getExportData = async () => {
     const folderRow = conversation?.folderId ? await getFolder(conversation.folderId) : null;
     const processedConversation = {
       id: conversationId,
-      title: conversation?.title || "Untitled Conversation",
+      title: conversation?.title || "Untitled Chat",
       folderId: conversation?.folderId ?? null,
       folderName: folderRow?.name ?? null,
       messages: await processMessages(conversation.messages, true),
@@ -172,6 +174,5 @@ export const getExportData = async () => {
     };
     processedConversations.push(processedConversation);
   }
-  return { conversations: processedConversations, version: "0.9.0" };
-  // TODO package version
+  return { conversations: processedConversations, version: packageJson.version };
 };

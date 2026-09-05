@@ -6,6 +6,7 @@ import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
+import { LiveModeProvider } from "./components/LiveMode/LiveModeContext";
 
 function App() {
   const { i18n } = useTranslation();
@@ -29,7 +30,9 @@ function App() {
     <BrowserRouter key={i18n.language}>
       <ToastProvider/>
       <ModalProvider>
-        <PublicRoute />
+        <LiveModeProvider>
+          <PublicRoute />
+        </LiveModeProvider>
       </ModalProvider>
     </BrowserRouter>
   );

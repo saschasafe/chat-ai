@@ -1,44 +1,59 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 
 import {
   ChevronLeft,
-  ChevronDown,
-  Download,
-  Edit,
-  FolderInput,
-  FolderPlus,
-  MoreVertical,
-  Plus,
+  FolderMoveTo,
+  OverflowMenuVertical,
   Search,
-  Trash2,
-  X,
-} from "lucide-react";
-import { assignConversationToFolder, useConversationList, useFolderList } from "../../db";
+  Close,
+} from "@carbon/icons-react";
+import {
+  assignConversationToFolder,
+  useConversationList,
+  useFolderList,
+} from "../../db";
 import { useModal } from "../../modals/ModalContext";
 
-import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
+import {
+  selectCollapsedTopics,
+  selectDarkMode,
+  selectShowUsageInSidebar,
+  toggleSidebar,
+} from "../../Redux/reducers/interfaceSettingsSlice";
 
-import { Bot } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
-import ImportConversationButton from "./ImportConversationButton";
+import TopicList, { UNSORTED_TOPIC_ID } from "./TopicList";
+import TopicCreateBubble from "./TopicCreateBubble";
+import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
-import ShortcutTooltip from "./ShortcutTooltip";
 import { useToast } from "../../hooks/useToast";
-
-const ALL_FOLDERS = "__all__";
+import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
+import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
+import ShortcutTooltip from "./ShortcutTooltip";
+import ImportChatButton from "./Buttons/ImportChatButton";
+import ImportPersonaButton from "./Buttons/ImportPersonaButton";
+import NewChatButton from "./Buttons/NewChatButton";
+import SummarizeChatButton from "./Buttons/SummarizeChatButton";
+import ExportChatButton from "./Buttons/ExportChatButton";
+import DeleteChatButton from "./Buttons/DeleteChatButton";
+import RenameChatButton from "./Buttons/RenameChatButton";
 
 export default function SidebarContent({
   localState,
   setLocalState,
   handleNewConversation,
+  userData,
+  modelsData,
 }: {
   localState: any;
   setLocalState: (state: any) => void;
   handleNewConversation: (folderId?: string | null) => Promise<void>;
+  userData?: any;
+  modelsData?: any;
 }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -46,23 +61,23 @@ export default function SidebarContent({
   const { t } = useTranslation();
   const { notifyError } = useToast();
   const currentConversationId = localState?.id;
+  const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
+  const isDark = useSelector(selectDarkMode);
 
-  const { isDesktop, isTouch } = useWindowSize();
+  const { isDesktop, windowWidth } = useWindowSize();
+  // Below this the sidebar is an overlay drawer (see Sidebar.jsx), which leaves
+  // an anchored bubble nowhere to go — those widths keep the dialog.
+  const sidebarIsDocked = windowWidth >= 1081;
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
-  const [foldersExpanded, setFoldersExpanded] = useState(true);
-  const folderMap = useMemo(
-    () => new Map(folders.map((folder) => [folder.id, folder.name])),
-    [folders]
-  );
-  const [activeFolderId, setActiveFolderId] = useState<string>(ALL_FOLDERS);
+  
   // have an own state of selected Conversation id to update the ui smoothly
-  const [selectedConversationId, setSelectedConversationId] = useState(
-    currentConversationId
-  );
+  const [selectedConversationId, setSelectedConversationId] = useState(currentConversationId);
   const [hoveredId, setHoveredId] = useState(null);
-  const [draggingConversationId, setDraggingConversationId] = useState<string | null>(null);
-  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  const [draggingConversationId, setDraggingConversationId] = useState<
+    string | null
+  >(null);
+  const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
 
   useEffect(() => {
     if (localState?.id) {
@@ -89,45 +104,39 @@ export default function SidebarContent({
     setSearchOpen(false);
   }, []);
 
-  useEffect(() => {
-    if (activeFolderId === ALL_FOLDERS) {
-      return;
-    }
-    const exists = folders.some((folder) => folder.id === activeFolderId);
-    if (!exists) {
-      setActiveFolderId(ALL_FOLDERS);
-    }
-  }, [activeFolderId, folders]);
-
   const [activeMenu, setActiveMenu] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuRef = useRef(null);
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
 
-  const folderCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    counts.set(ALL_FOLDERS, conversations.length);
-    folders.forEach((folder) => counts.set(folder.id, 0));
-    conversations.forEach((conv) => {
-      if (!conv.folderId) return;
-      const key = conv.folderId;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    });
-    return counts;
-  }, [conversations, folders]);
-
-  const filteredByFolder = useMemo(() => {
-    if (activeFolderId === ALL_FOLDERS) return conversations;
-    return conversations.filter((conv) => conv.folderId === activeFolderId);
-  }, [conversations, activeFolderId]);
-
   const visibleConversations = useMemo(() => {
-    if (!hasSearch) return filteredByFolder;
-    return filteredByFolder.filter((conv) => {
-      const title = conv.title || t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+    if (!hasSearch) return conversations;
+    return conversations.filter((conv) => {
+      const title =
+        conv.title ||
+        t("conversation.untitled", { defaultValue: "Untitled Chat" });
       return title.toLowerCase().includes(normalizedSearch);
     });
-  }, [filteredByFolder, hasSearch, normalizedSearch, t]);
+  }, [conversations, hasSearch, normalizedSearch, t]);
+
+  const conversationsByTopic = useMemo(() => {
+    const grouped = new Map<string, any[]>();
+    folders.forEach((folder) => grouped.set(folder.id, []));
+    conversations.forEach((conv) => {
+      const bucket = conv.folderId ? grouped.get(conv.folderId) : undefined;
+      if (bucket) bucket.push(conv);
+    });
+    return grouped;
+  }, [conversations, folders]);
+
+  // Conversations with no topic — plus any whose topic has since disappeared,
+  // so a stale folderId can never hide a conversation from the sidebar.
+  const unsortedConversations = useMemo(() => {
+    const known = new Set(folders.map((folder) => folder.id));
+    return conversations.filter(
+      (conv) => !conv.folderId || !known.has(conv.folderId),
+    );
+  }, [conversations, folders]);
 
   const noSearchResults = hasSearch && visibleConversations.length === 0;
 
@@ -136,33 +145,34 @@ export default function SidebarContent({
       event.dataTransfer?.setData("text/plain", conversationId);
       event.dataTransfer.effectAllowed = "move";
       setDraggingConversationId(conversationId);
-      setDragOverFolderId(null);
+      setDragOverTopicId(null);
     },
-    []
+    [],
   );
 
   const handleConversationDragEnd = useCallback(() => {
     setDraggingConversationId(null);
-    setDragOverFolderId(null);
+    setDragOverTopicId(null);
   }, []);
 
-  const handleFolderDrop = useCallback(
+  const handleTopicDrop = useCallback(
     async (targetId: string) => {
       if (!draggingConversationId) return;
 
       const conversation = conversations.find(
-        (conv) => conv.id === draggingConversationId
+        (conv) => conv.id === draggingConversationId,
       );
       if (!conversation) {
         setDraggingConversationId(null);
-        setDragOverFolderId(null);
+        setDragOverTopicId(null);
         return;
       }
 
-      const nextFolderId = targetId === ALL_FOLDERS ? null : targetId;
+      // The Unsorted row is virtual, so dropping on it clears the topic.
+      const nextFolderId = targetId === UNSORTED_TOPIC_ID ? null : targetId;
       if ((conversation.folderId ?? null) === nextFolderId) {
         setDraggingConversationId(null);
-        setDragOverFolderId(null);
+        setDragOverTopicId(null);
         return;
       }
 
@@ -173,28 +183,40 @@ export default function SidebarContent({
         notifyError(t("folders.error_generic"));
       } finally {
         setDraggingConversationId(null);
-        setDragOverFolderId(null);
+        setDragOverTopicId(null);
       }
     },
-    [conversations, draggingConversationId, notifyError, t]
+    [conversations, draggingConversationId, notifyError, t],
   );
 
   function onClose() {
     dispatch(toggleSidebar());
   }
 
-  const handleFolderSelection = (folderId: string) => {
-    setActiveFolderId(folderId);
-  };
+  const [createTopicAnchor, setCreateTopicAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = (anchor: { x: number; y: number }) => {
+    if (sidebarIsDocked) {
+      setCreateTopicAnchor(anchor);
+      return;
+    }
     openModal("createFolder");
   };
 
-  const handleRenameFolder = (folder: { id: string; name: string }) => {
+  const handleRenameFolder = (folder: {
+    id: string;
+    name: string;
+    color?: string;
+    icon?: string;
+  }) => {
     openModal("renameFolder", {
       folderId: folder.id,
       initialName: folder.name,
+      initialColor: folder.color ?? null,
+      initialIcon: folder.icon ?? null,
     });
   };
 
@@ -207,9 +229,9 @@ export default function SidebarContent({
 
   const handleMoveConversation = (conv) => {
     if (!conv) return;
-    openModal("moveConversation", {
+    openModal("moveChat", {
       conversationId: conv.id,
-      conversationTitle: conv.title || "Untitled Conversation",
+      conversationTitle: conv.title || "Untitled Chat",
       currentFolderId: conv.folderId ?? null,
       folders,
       localState,
@@ -217,15 +239,13 @@ export default function SidebarContent({
     });
   };
 
-  const getFolderDisplayName = (folderId?: string | null) => {
-    if (!folderId) return t("folders.uncategorized");
-    return folderMap.get(folderId) || t("folders.uncategorized");
-  };
-
   const highlightText = (text?: string | null) => {
-    const value = text || t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+    const value =
+      text ||
+      t("conversation.untitled", { defaultValue: "Untitled Chat" });
     if (!hasSearch) return value;
-    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapeRegExp = (str: string) =>
+      str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "ig");
     const parts = value.split(regex);
     return parts.map((part, index) => {
@@ -243,93 +263,6 @@ export default function SidebarContent({
     });
   };
 
-  const renderFolderRow = (option: {
-    id: string
-    label: string
-    countKey: string
-    canEdit?: boolean
-    folder?: { id: string; name: string }
-  }) => {
-    const isActive = activeFolderId === option.id;
-    const rawCount = folderCounts.get(option.countKey) ?? 0;
-    const displayCount = rawCount > 999 ? "999+" : rawCount;
-    const isDropTarget = draggingConversationId !== null && dragOverFolderId === option.id;
-    return (
-      <div
-        key={option.id}
-        role="button"
-        tabIndex={0}
-        onClick={() => handleFolderSelection(option.id)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleFolderSelection(option.id);
-          }
-        }}
-        onDragEnter={(e) => {
-          if (!draggingConversationId) return;
-          e.preventDefault();
-          setDragOverFolderId(option.id);
-        }}
-        onDragOver={(e) => {
-          if (!draggingConversationId) return;
-          e.preventDefault();
-        }}
-        onDragLeave={(e) => {
-          if (!draggingConversationId) return;
-          if (dragOverFolderId === option.id) {
-            setDragOverFolderId(null);
-          }
-        }}
-        onDrop={(e) => {
-          if (!draggingConversationId) return;
-          e.preventDefault();
-          handleFolderDrop(option.id);
-        }}
-        className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition cursor-pointer border border-transparent ${
-          isActive
-            ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
-            : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40"
-        } ${isDropTarget ? "border-tertiary/60 bg-tertiary/5 dark:bg-tertiary/20" : ""}`}
-      >
-        <div className="flex-1 flex items-center justify-between text-left min-w-0">
-          <span className="truncate select-none pointer-events-none" title={option.label}>
-            {option.label}
-          </span>
-          <div className="flex items-center justify-between text-left min-w-0">
-            {option.canEdit && option.folder && (
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRenameFolder(option.folder);
-                  }}
-                  className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteFolder(option.folder);
-                  }}
-                  className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-            <span className="ml-2 text-[11px] select-none pointer-events-none font-semibold text-gray-500 dark:text-gray-200">
-              {displayCount}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const handleSelectConversation = (id) => {
     if (id === currentConversationId) return;
     setSelectedConversationId(id); // update selected now for nicer user interaction
@@ -339,13 +272,9 @@ export default function SidebarContent({
     }
   };
 
-  const onNewConversation = () => {
-    const targetFolder =
-      activeFolderId === ALL_FOLDERS
-        ? null
-        : activeFolderId;
-    console.log("Creating new conversation in folder: ", activeFolderId);
-    handleNewConversation(targetFolder)
+  const onNewConversation = (folderId) => {
+    // New conversations start unsorted; the user files them into a topic after.
+    handleNewConversation(folderId || null)
       .then(() => {
         if (conversations[0]?.id) {
           setSelectedConversationId(currentConversationId);
@@ -363,23 +292,12 @@ export default function SidebarContent({
     // Only enable double-click rename on desktop
     if (!isDesktop) return;
 
-    openModal("renameConversation", {
+    openModal("renameChat", {
       id: conv.id,
-      currentTitle: conv.title || "Untitled Conversation",
+      currentTitle: conv.title || "Untitled Chat",
       localState: localState,
       setLocalState: setLocalState,
     });
-  };
-
-  const handleExportConversation = (conv) => {
-    const dataStr = JSON.stringify(conv, null, 2);
-    const dataUri =
-      "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `conversation-${conv.id}-${Date.now()}.json`;
-    const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", dataUri);
-    linkElement.setAttribute("download", exportFileDefaultName);
-    linkElement.click();
   };
 
   const openMenu = (e, convId) => {
@@ -416,7 +334,7 @@ export default function SidebarContent({
     const handleClickOutside = (event) => {
       // Check if click is on menu or any menu button
       const clickedOnMenuButton = Object.values(menuButtonRefs.current).some(
-        (ref) => ref && ref.contains(event.target)
+        (ref) => ref && ref.contains(event.target),
       );
 
       if (
@@ -456,6 +374,70 @@ export default function SidebarContent({
     }
   }, [activeMenu]);
 
+  const renderConversationRow = (conv) => {
+    if (!conv) return null;
+    const id = conv.id;
+    const isActive = id === selectedConversationId;
+    const isHovered = hoveredId === id;
+    const isMenuOpen = activeMenu === id;
+    const isDragging = draggingConversationId === id;
+
+    return (
+      <div
+        key={id}
+        onClick={() => handleSelectConversation(id)}
+        draggable
+        onDragStart={(event) => handleConversationDragStart(event, id)}
+        onDragEnd={handleConversationDragEnd}
+        className={`group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
+          isActive
+            ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
+            : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
+        } ${isDragging ? "border-tertiary/60 bg-tertiary/10 dark:bg-tertiary/20" : ""}`}
+        data-current={isActive ? "true" : "false"}
+        style={{
+          WebkitTapHighlightColor: "transparent",
+          minHeight: "16px",
+        }}
+      >
+        {/* Title container */}
+        <div className="flex items-center h-full w-full group">
+          <div
+            className="flex-1 overflow-hidden min-w-0"
+            title={conv.title || "Untitled Chat"}
+            onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
+            style={{ cursor: isDesktop ? "text" : "pointer" }}
+          >
+            <div className="truncate text-xs leading-relaxed cursor-pointer">
+              {highlightText(conv.title)}
+            </div>
+          </div>
+
+          {/* Dropdown Menu Button */}
+          <div
+            className={`transition-opacity duration-200 ${
+              window.innerWidth < 1024 || isHovered || isActive || isMenuOpen
+                ? "opacity-100"
+                : "opacity-0"
+            } group-hover:opacity-100`}
+          >
+            <button
+              ref={(el) => (menuButtonRefs.current[id] = el)}
+              onClick={(e) => openMenu(e, id)}
+              className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
+                hover:scale-110 active:scale-95 cursor-pointer`}
+              style={{
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <OverflowMenuVertical size={16} className="text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className="flex flex-col select-none h-full w-full transition-all duration-200 ease-in-out"
@@ -466,279 +448,167 @@ export default function SidebarContent({
       {/* Header with close button */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 gap-2">
         <AiServicesMenu />
-        <ShortcutTooltip label={t("sidebar.close_sidebar")} position="left" enterDelay={150}>
+        <ShortcutTooltip
+          label={t("sidebar.close_sidebar")}
+          position="left"
+          enterDelay={150}
+        >
           <button
             type="button"
             onClick={onClose}
             aria-label={t("sidebar.close_sidebar")}
             className="cursor-pointer p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-200 flex items-center justify-center text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft size={20} />
           </button>
         </ShortcutTooltip>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
-          <div className="px-3 pt-3 border-b border-gray-100 dark:border-gray-800 space-y-3">
-            <div className="flex gap-1">
+        {/* Conversations header, with the search field it reveals */}
+        <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between gap-1 pb-3">
+            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
+          <div className="flex items-center justify-between gap-1">
+            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
+            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
+          </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {t("folders.title")}
+            </span>
             <button
-              onClick={onNewConversation}
-              className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
-                active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white 
-                pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs 
-                font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
+              type="button"
+              onClick={openSearch}
+              className={`flex items-center rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer ${
+                searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}
+              aria-label={t("folders.search_label")}
             >
-              <Plus className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.new_conversation" />
-              </span>
-              
+              <Search size={16} />
             </button>
-            {(
+          </div>
+          <div
+            className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              searchVisible
+                ? "max-h-16 opacity-100 pt-3 pb-1 translate-y-0"
+                : "max-h-0 opacity-0 pt-0 pb-0 -translate-y-1 pointer-events-none"
+            }`}
+          >
+            <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Escape") return;
+                  e.preventDefault();
+                  if (hasSearch) {
+                    setSearchQuery("");
+                  } else {
+                    setSearchOpen(false);
+                  }
+                }}
+                placeholder={t("folders.search_placeholder")}
+                className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
+              />
+              {searchQuery.length > 0 ? (
                 <button
                   type="button"
-                  onClick={openSearch}
-                  className={`group flex items-center rounded-xl text-xs
-                  text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
-                  hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-[max-width,max-height,padding,opacity,transform]
-                  duration-300 cursor-pointer
-                  ${!searchVisible
-                    ? "max-w-14 max-h-14 px-2 py-2 opacity-100 gap-2 translate-y-0"
-                    : "max-w-0 max-w-0 px-0 py-0 opacity-0 -translate-y-1 pointer-events-none"}
-                  `}
-                  aria-label={t("folders.search_label")}
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  aria-label={t("folders.clear_search")}
+                  onClick={() => setSearchQuery("")}
                 >
-                  <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
-                  {/* <span className="flex-1 text-left truncate">
-                    {t("folders.search_action")}
-                  </span> */}
+                  <Close size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  aria-label={t("common.cancel")}
+                  onClick={closeSearch}
+                >
+                  <Close size={16} />
                 </button>
               )}
-              </div>
-
-              <div
-                className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  searchVisible
-                    ? "max-h-14 opacity-100 pb-3 translate-y-0"
-                    : "max-h-0 opacity-0 pb-0 -translate-y-1 pointer-events-none"
-                }`}
-              >
-                <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Escape") return;
-                      e.preventDefault();
-                      if (hasSearch) {
-                        setSearchQuery("");
-                      } else {
-                        setSearchOpen(false);
-                      }
-                    }}
-                    placeholder={t("folders.search_placeholder")}
-                    className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
-                  />
-                  {searchQuery.length > 0 ? (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      aria-label={t("folders.clear_search")}
-                      onClick={() => setSearchQuery("")}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      aria-label={t("common.cancel")}
-                      onClick={closeSearch}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
+        </div>
+
         <div
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <div className="pl-3 pr-2 pt-3 pb-1 border-b border-gray-100 dark:border-gray-800 space-y-1 bg-white dark:bg-bg_secondary_dark">
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setFoldersExpanded((v) => !v)}
-                className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
-                aria-expanded={foldersExpanded}
-              >
-                <span>{t("folders.title")}</span>
-                <ChevronDown
-                  className={`transition-transform duration-200 h-3 w-3 ${
-                    foldersExpanded ? "rotate-0" : "-rotate-90"
-                  }`}
-                />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCreateFolder}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition"
-                aria-label={t("folders.create_button")}
-              >
-                <FolderPlus className="w-4 h-4" />
-              </button>
-            </div>
-            <div
-              className={`
-                overflow-hidden
-                transition-all duration-300 ease-in-out
-                ${foldersExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}
-              `}
-            >
-              <div className="space-y-1 pt-1">
-              {renderFolderRow({
-                id: ALL_FOLDERS,
-                label: t("folders.all"),
-                countKey: ALL_FOLDERS,
-              })}
-              {folders.map((folder) =>
-                renderFolderRow({
-                  id: folder.id,
-                  label: folder.name,
-                  countKey: folder.id,
-                  canEdit: true,
-                  folder,
-                })
-              )}
-              </div>
-            </div>
-          </div>
-
-          {/* Conversations List */}
-          <div className="mx-3 pt-3 space-y-1 pb-6">
-            <div className="flex items-center justify-between pb-2 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              <span className="truncate">
-                {activeFolderId === ALL_FOLDERS
-                  ? t("folders.all")
-                  : folderMap.get(activeFolderId) || t("folders.uncategorized")}
-              </span>
-              <span className="ml-2 shrink-0 text-[11px] font-semibold text-gray-500 dark:text-gray-200">
-                {(visibleConversations.length ?? 0) > 999 ? "999+" : visibleConversations.length}
-              </span>
-            </div>
-            {noSearchResults && (
-              <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
-                <Trans i18nKey="folders.search_no_results" values={{ query: searchQuery }} />
-              </div>
-            )}
-            {visibleConversations.map((conv) => {
-              const id = conv.id;
-              if (!conv) return null;
-              const isActive = id === selectedConversationId;
-              const isHovered = hoveredId === id;
-              const isMenuOpen = activeMenu === id;
-              const isDragging = draggingConversationId === id;
-
-              return (
-                <div
-                  key={id}
-                  onClick={() => handleSelectConversation(id)}
-                  draggable
-                  onDragStart={(event) => handleConversationDragStart(event, id)}
-                  onDragEnd={handleConversationDragEnd}
-                  className={`group relative px-3 py-3 rounded-2xl touch-manipulation border border-transparent ${
-                    isActive
-                      ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
-                      : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
-                  } ${isDragging ? "border-tertiary/60 bg-tertiary/10 dark:bg-tertiary/20" : ""}`}
-                  data-current={isActive ? "true" : "false"}
-                  style={{
-                    WebkitTapHighlightColor: "transparent",
-                    minHeight: "52px",
-                  }}
-                >
-                  {/* Title container */}
-                  <div className="flex items-center h-full w-full group">
-                    <div
-                      className="flex-1 overflow-hidden min-w-0"
-                      title={conv.title || "Untitled Conversation"}
-                      onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
-                      style={{ cursor: isDesktop ? "text" : "pointer" }}
-                    >
-                      <div className="truncate text-xs font-medium leading-relaxed cursor-pointer">
-                        {highlightText(conv.title)}
-                      </div>
-                      {/* Removed folder label under "All chats" */}
-                    </div>
-
-                    {/* Dropdown Menu Button */}
-                    <div
-                      className={`transition-opacity duration-200 ${
-                        window.innerWidth < 1024 ||
-                        isHovered ||
-                        isActive ||
-                        isMenuOpen
-                          ? "opacity-100"
-                          : "opacity-0"
-                      } group-hover:opacity-100`}
-                    >
-                      <button
-                        ref={(el) => (menuButtonRefs.current[id] = el)}
-                        onClick={(e) => openMenu(e, id)}
-                        className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
-                          hover:scale-110 active:scale-95 cursor-pointer`}
-                        style={{
-                          WebkitTapHighlightColor: "transparent",
-                        }}
-                      >
-                        <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      </button>
-                    </div>
+          {/* Conversations, grouped by topic */}
+          <div className="pl-3 pr-2 pt-2 pb-1 space-y-1">
+            {hasSearch ? (
+              <div className="space-y-1">
+                {noSearchResults ? (
+                  <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
+                    <Trans
+                      i18nKey="folders.search_no_results"
+                      values={{ query: searchQuery }}
+                    />
                   </div>
-                </div>
-              );
-            })}
+                ) : (
+                  visibleConversations.map((conv) => renderConversationRow(conv))
+                )}
+              </div>
+            ) : (
+              <TopicList
+                topics={folders}
+                conversationsByTopic={conversationsByTopic}
+                unsortedConversations={unsortedConversations}
+                onCreateTopic={handleCreateFolder}
+                onRenameTopic={handleRenameFolder}
+                onDeleteTopic={handleDeleteFolder}
+                onNewConversation={onNewConversation}
+                draggingConversationId={draggingConversationId}
+                dragOverTopicId={dragOverTopicId}
+                onDragEnterTopic={setDragOverTopicId}
+                onDragLeaveTopic={(topicId) =>
+                  setDragOverTopicId((current) =>
+                    current === topicId ? null : current,
+                  )
+                }
+                onDropTopic={handleTopicDrop}
+                renderConversationRow={renderConversationRow}
+                isDark={isDark}
+              />
+            )}
           </div>
         </div>
 
-        {/* Bottom section */}
+        {/* Pinned footer: the user block */}
         <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
-            <ImportConversationButton variant="button" />
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Bot className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.import_persona" />
-              </span>
-            </button>
+            {showUsageInSidebar && userData?.limits && (
+              <div className="flex flex-col gap-2">
+                <UserLimitsDisplay limits={userData.limits} variant="sidebar" />
+                <OrgLimitsDisplay limits={userData.limits} variant="sidebar" />
+              </div>
+            )}
+            <SidebarUserCard
+              localState={localState}
+              userData={userData}
+              modelsData={modelsData}
+            />
           </div>
         </div>
-
       </div>
+
+      <TopicCreateBubble
+        isOpen={createTopicAnchor !== null}
+        onClose={() => setCreateTopicAnchor(null)}
+        anchor={createTopicAnchor ?? { x: 0, y: 0 }}
+      />
 
       {/* MENU RENDERED OUTSIDE - PORTAL STYLE */}
       {activeMenu && (
@@ -759,25 +629,16 @@ export default function SidebarContent({
           />
 
           <div className="p-1 bg-white dark:bg-gray-800 rounded-lg relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const conv = conversations.find((c) => c.id === activeMenu);
-                openModal("renameConversation", {
-                  id: activeMenu,
-                  currentTitle: conv?.title || "Untitled Conversation",
-                  localState: localState,
-                  setLocalState: setLocalState,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Edit className="w-3.5 h-3.5" />
-              <Trans i18nKey="common.rename" />
-              {/* TODO use Translation */}
-            </button>
-
+            {/* Rename chat menu item */}
+            <RenameChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+              variant={"menu"}
+              closeMenu={closeMenu}
+              convId={activeMenu}
+              conversations={conversations}
+            />
+            {/* Move chat menu item */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -789,48 +650,38 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <FolderInput className="w-3.5 h-3.5" />
+              <FolderMoveTo size={14} />
               <Trans i18nKey="folders.move_action" />
             </button>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const conv = conversations.find((c) => c.id === activeMenu);
-                if (conv.id === localState.id) {
-                  // Flush changes
-                  setLocalState((prev) => ({
-                    ...prev,
-                    flush: true,
-                  }));
-                }
-                openModal("exportConversation", {
-                  localState,
-                  conversationId: conv.id,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <Trans i18nKey="export_conversation.export" />
-            </button>
+            {/* Export chat menu item */}
+            <ExportChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+              variant={"menu"}
+              closeMenu={closeMenu}
+              convId={activeMenu}
+            />
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openModal("deleteConversation", {
-                  id: activeMenu,
-                  conversations,
-                  currentConversationId: localState?.id,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <Trans i18nKey="common.delete" />
-            </button>
+            {/* Summarize chat menu item - only if active chat */}
+            {localState.id == activeMenu && (
+              <SummarizeChatButton
+                variant={"menu"}
+                localState={localState}
+                setLocalState={setLocalState}
+                closeMenu={closeMenu}
+              />
+            )}
+            
+            {/* Delete chat menu item */}
+            <DeleteChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+              variant={"menu"}
+              closeMenu={closeMenu}
+              convId={activeMenu}
+              conversations={conversations}
+            />
           </div>
         </div>
       )}

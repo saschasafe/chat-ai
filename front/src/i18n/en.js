@@ -3,12 +3,13 @@ export default {
   common: {
     loading: "Loading...",
     undo: "Undo",
+    scroll: "Scroll to bottom",
     rename: "Rename",
     create: "Create",
     save: "Save",
     import: "Import Chat",
     export: "Export Chat",
-    summarize: "Summarize and Replace",
+    summarize: "Summarize",
     summarizing: "Summarizing...",
     summarize_success: "Conversation summarized successfully.",
     summarize_error: "Summarization failed. Your conversation is unchanged.",
@@ -34,6 +35,55 @@ export default {
     skip_backup: "Skip Backup",
     upgrade_chat_ai: "Upgrade Chat AI",
   },
+  // Live mode: hands free voice plus webcam or screen sharing
+  live_mode: {
+    open: "Live Mode",
+    title: "Live Mode",
+    status_idle: "Idle",
+    status_listening: "Listening",
+    status_transcribing: "Transcribing",
+    status_thinking: "Thinking",
+    status_speaking: "Speaking",
+    hint_idle: "Start the voice loop to talk hands free.",
+    hint_listening: "Go ahead, I stop recording once you pause.",
+    hint_transcribing: "Turning your speech into text...",
+    hint_thinking: "Waiting for the model's reply...",
+    hint_speaking: "Playing the reply. You can skip it at any time.",
+    start_voice: "Start talking",
+    stop_voice: "Stop",
+    interrupt: "Skip reply",
+    end_turn: "Send now",
+    input_level: "Microphone level",
+    warning_no_input:
+      "The microphone delivered no sound at all. Check that it is not muted and that the right device is selected.",
+    warning_nothing_understood:
+      "Nothing could be made out in that recording. Try again a little louder.",
+    source_camera: "Camera",
+    source_screen: "Screen",
+    default_camera: "Default camera",
+    microphone: "Microphone",
+    default_microphone: "Default microphone",
+    microphone_locked: "Stop the voice loop to switch microphone.",
+    microphone_fallback:
+      "The selected microphone was unavailable, the default one is in use.",
+    voice_error: "Voice loop failed: {{error}}",
+    start_vision: "Share",
+    stop_vision: "Stop sharing",
+    no_stream: "No camera or screen shared yet",
+    analyzing: "Analyzing",
+    vision_model: "Vision model",
+    no_vision_model: "No image capable model available",
+    interval: "Every",
+    vision_error: "Frame analysis failed: {{error}}",
+    observations: "Live observations",
+    no_observations: "Observations appear here once you share a camera or screen.",
+    transcript: "Conversation",
+    no_transcript: "Your spoken turns are added to this conversation.",
+    voice_fallback:
+      "There is no voice for this language, replies are read by an English voice.",
+    you: "You",
+    assistant: "Assistant",
+  },
   feedback:{
     thumbsup:"The response is good.",
     thumbsdown: "The response is not so good.",
@@ -41,7 +91,7 @@ export default {
   },
   // Sidebar
   sidebar: {
-    new_conversation: "New Conversation",
+    new_conversation: "New Chat",
     import_persona: "Chat with Persona",
     expand: "Expand",
     extend: "Expand",
@@ -49,33 +99,45 @@ export default {
     close_sidebar: "Close Sidebar",
     rename_tooltip: "Rename: {{title}}",
     shortcut_new_conversation: "Ctrl + Shift + O",
+    user_section: "User",
   },
   folders: {
-    title: "Folders",
+    title: "Chats",
     all: "All chats",
-    uncategorized: "Unsorted",
-    create_button: "New folder",
+    uncategorized: "Unsorted Chats",
+    create_button: "New topic",
+    empty_topic: "Drag a chat here.",
     search_label: "Search",
     search_action: "Search chats",
     search_placeholder: "Search by title",
     search_no_results: 'No matches for "{{query}}"',
     clear_search: "Clear search",
-    create_title: "Create Folder",
-    rename_title: "Rename Folder",
-    delete_title: "Delete Folder",
+    create_title: "Create topic",
+    rename_title: "Rename topic",
+    delete_title: "Delete topic",
     delete_description:
-      'Delete folder "{{name}}"? Conversations remain available and move to "All chats".',
-    name_label: "Folder name",
-    name_placeholder: "Enter folder name",
-    error_required: "Please enter a folder name.",
+      'Delete topic "{{name}}"? Chats remain available and move to "Unsorted Chats".',
+    name_label: "Topic name",
+    name_placeholder: "Enter topic name",
+    error_required: "Please enter a topic name.",
+    create_blurb: "Group related chats under a new topic. Configure the name, color, and icon of the topic.",
+    blurb_examples: "Examples",
+    suggestion_homework: "Homework",
+    suggestion_writing: "Writing",
+    suggestion_health: "Health",
+    suggestion_research: "Research",
+    creating: "Creating…",
+    done: "Done",
+    choose_color: "Choose a colour",
+    choose_icon: "Choose an icon",
     error_generic: "Could not complete the action. Please try again.",
-    move_title: "Move Conversation",
-    move_description: 'Select a folder for "{{title}}"',
+    move_title: "Move to topic",
+    move_description: 'Choose a topic for "{{title}}"',
     move_action: "Move",
-    new_folder_prompt: "Create new folder",
+    new_folder_prompt: "Create new topic",
     create_inline: "Create",
   },
-  // Settings panel
+  // Chat settings
   settings: {
     tools_enabled: "Tools are enabled",
     tools_disabled: "Tools are disabled",
@@ -83,9 +145,52 @@ export default {
     web_search_disabled: "Web search is disabled",
     close_panel: "Close Settings",
     system_prompt_placeholder: "Enter the system prompt here",
+    reasoning_effort: {
+      title: "Reasoning",
+      subtitle: "Configure the reasoning effort",
+      options: {
+          none: {
+            label: "Off",
+            description: "Reasoning is switched off",
+          },
+          off: {
+            label: "Off",
+            description: "Reasoning is switched off",
+          },
+          on: {
+            label: "On",
+            description: "Reasoning is switched on",
+          },
+          low: {
+            label: "Low",
+            description: "Minimal reasoning effort",
+          },
+          medium: {
+            label: "Medium",
+            description:
+              "Medium reasoning effort",
+          },
+          high: {
+            label: "High",
+            description:
+              "High reasoning effort",
+          },
+          xhigh: {
+            label: "High",
+            description:
+              "High reasoning effort",
+          },
+          max: {
+            label: "Max",
+            description:
+              "Maximum reasoning effort",
+          }
+        },
+    },
     reset_default: "Reset default",
     default: "Default",
     tools_title: "GWDG Tools",
+    chat_settings: "Chat settings",
     label_web_search: "Web Search",
     label_image_generation: "Image Generation",
     label_image_modification: "Image Modification",
@@ -134,13 +239,13 @@ export default {
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
-    untitled: "Untitled Conversation",
+    untitled: "Untitled Chat",
   },
   // Footer
   footer: {
     imprint: "Imprint",
     terms: "Terms of Use",
-    docs: "Documentation",
+    docs: "Docs",
     privacy: "Privacy",
     faq: "FAQ",
     contact: "Contact Us",
@@ -151,25 +256,98 @@ export default {
   // User Settings Modal
   user_settings: {
     title: "User Profile Settings",
+    tabs: {
+      navigation_label: "Profile settings sections",
+      profile: {
+        label: "Profile",
+        title: "Profile and usage",
+        description: "Review your account details and usage information.",
+      },
+      chat: {
+        label: "Chat",
+        title: "Chat preferences",
+        description:
+          "Choose defaults that apply to every conversation on this device.",
+      },
+      memories: {
+        label: "Memories",
+        title: "Saved memories",
+        description: "Review and manage details Chat AI has learned.",
+      },
+      data: {
+        label: "Data",
+        title: "Data and privacy",
+        description: "Export or remove data stored in this browser.",
+      },
+    },
+    account: {
+      username: "Username",
+      email: "Email address",
+    },
+    usage: {
+      title: "Usage",
+      description:
+        "Monitor your monthly usage and organization budget usage.",
+    },
     monthly_usage: "Monthly Usage",
     org_usage: "Organization Budget Usage",
+    sidebar_usage: {
+      label: "Show usage in sidebar",
+      description: "Keep your current usage visible while chatting.",
+    },
+    chat_preferences: {
+      title: "Chat preferences",
+      description:
+        "These preferences apply to every conversation on this device.",
+      memory: {
+        label: "Memory",
+        description: "Choose how Chat AI uses your saved memories.",
+        help_label: "Learn about memory",
+        options: {
+          none: {
+            label: "None",
+            description: "Do not use saved memories in responses.",
+          },
+          recall: {
+            label: "Recall",
+            description: "Use saved memories to personalize responses.",
+          },
+          learn: {
+            label: "Learn",
+            description:
+              "Use saved memories and learn relevant new details.",
+          },
+        },
+      },
+      suggestions: {
+        section_label: "Suggestions",
+        label: "Suggest follow-up prompts",
+        description: "Show suggested ways to continue after each response.",
+        help_label: "Learn about follow-up prompts",
+      },
+    },
     default_model: {
       title: "Default Model",
       current: "Current: {{currentModel}}",
-      description: "Select the default model for new conversations.",
+      description: "Select the default model for new chats.",
+      list_label: "Available default models",
     },
     timeout: {
       title: "Request Timeout",
       description: "Set how long to wait for AI responses before timing out.",
       seconds: "Timeout (seconds)",
+      seconds_short: "sec",
       range: "Range: 5-900 seconds",
     },
     data: {
       title: "Manage Data",
-      description: `Here you can manage all locally stored data. This data is only stored on your device.\n\n
-                            Clearing data will result in permanently losing access to all past conversations, memories, settings, and attachments.`,
+      description:
+        "Export a copy of your local data or permanently remove chats, memories, settings, and attachments from this browser.",
+      export_success: "Local data exported successfully.",
+      export_error: "Local data could not be exported.",
     },
     clear_data_button: "Clear Data",
+    import_data_button: "Import Data",
     export_data_button: "Export Data",
     memory: {
       title: "User Memories",
@@ -245,14 +423,14 @@ export default {
   },
   // Rename Conversation Modal
   rename_conversation: {
-    title: "Rename conversation",
-    enter_name: "Enter conversation title",
+    title: "Rename chat",
+    enter_name: "Enter chat title",
     alert_empty: "Title is required",
   },
   // Delete Conversation Modal
   delete_conversation: {
-    title: "Delete Conversation",
-    description: "Are you sure you want to delete this conversation?",
+    title: "Delete Chat",
+    description: "Are you sure you want to delete this chat?",
   },
   // Share Settings Modal
   share_settings: {
@@ -266,16 +444,18 @@ export default {
   // Help modals
   help: {
     title: "Help",
-    choiceproposer: "When set to \"On\", the model will propose a selection of relevant follow-up messages with its response, in order to assist you in continuing the conversation.",
+    choiceproposer:
+      "When enabled, Chat AI suggests relevant follow-up prompts after each response. This preference applies to every conversation on this device.",
     arcana:
       "Arcana is a unique feature of our service that empowers the LLM with specialized knowledge. When you enter a valid Arcana ID and its corresponding key, the LLM gains access to the knowledge contained within that Arcana. This enables the model to generate responses that are more informed and relevant to your needs. Leave the ID empty to use the model without any specialized knowledge.",
     mcp: "Enter the URL of your MCP (Model Context Protocol) Server (e.g., https://...). The MCP Server is a service that can provide the Chat AI with additional tools, data sources, or processing capabilities beyond its built‑in knowledge. By connecting to your specified MCP Server, the AI can interact with external systems, retrieve up‑to‑date or specialized information, and perform custom tasks according to the capabilities offered by that server.",
     models:
       "Chat AI provides access to a range of state-of-the-art Large Language Models (LLMs), each with distinct capabilities and performance characteristics. This allows you to explore and select the model that best aligns with your research goals and requirements. \
       Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs. For more details",
-
+    reasoning:
+      "The reasoning setting determines how deeply the model processes and analyzes information before generating a response. A higher reasoning effort level means the model will spend more time carefully considering the context, weighing possible interpretations, and refining its internal thought process to produce a more accurate, nuanced, and well-structured answer. A lower reasoning effort prioritizes speed over depth, resulting in faster but potentially less thorough responses. Adjust this setting based on whether you need quick replies or more deliberate, high-quality outputs",
     memory:
-      "Memory enhances conversation continuity by remembering context from previous messages. 'None' disables memory functionality - each conversation is treated independently. 'Recall' adds memory context to the system prompt, allowing the AI to reference earlier parts of your conversation. 'Learn' works similar to Recall, but also updates the memory with relevant parts of the current conversation. This feature provides a more natural conversational experience similar to other AI services. Memories are only stored locally in your browser.",
+      "Memory is a global preference for all conversations on this device. 'None' does not use saved memories. 'Recall' uses saved memories to personalize responses. 'Learn' also stores relevant new details from your conversations. Memories are stored only in your browser.",
     system_prompt:
       "The system prompt is a special command or instruction given at the beginning of a conversation to set the tone, context, or constraints for our interaction. It's a way to guide the model's behavior and ensure that it responds in a helpful and appropriate manner.",
     temperature:
@@ -288,6 +468,7 @@ export default {
       "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
   },
   model_selector: {
+    change_model: "Change model",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
   },
@@ -303,9 +484,9 @@ export default {
     model:
       "Here you can select the model to chat with. Each model has its own characteristics, capabilities and limitations.",
     sidebar:
-      "Create, remove, import, export, remove, search, and switch between conversations here. Organize your conversations with folders, and chat with pre-defined personas, if you like.",
+      "Create, remove, import, export, remove, search, and switch between conversations here. Organize your conversations with topics, and chat with pre-defined personas, if you like.",
     settings:
-      "Here you can adjust the conversation settings, including the system prompt, temperature, top_p, and memory settings. Ask the model to suggest follow-up prompts, and use GWDG tools, including arcana, image generation, web search, and more! Tools may not work with all models.",
+      "Here you can adjust conversation-specific settings, including the system prompt, temperature, top_p, and GWDG tools such as Arcana, image generation, and web search. Tools may not work with all models.",
     profile:
       "This button will open your user profile, where you can set your preferences, manage saved memories, and export or clear your data.",
     interface:
@@ -333,6 +514,12 @@ export default {
       "Caution! Clearing data will erase all your conversations, history, and settings. Are you sure?",
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
+    regenerate_confirm:
+      "Regenerating will delete this response and every message after it, and will apply your current settings. To keep this conversation intact, fork it into a new chat instead.",
+    regenerate_yes: "Regenerate",
+    regenerate_fork: "Fork",
+    regenerate_fork_success: "Chat forked successfully",
+    regenerate_fork_fail: "Chat could not be forked",
     summarize_replace:
       "This will replace your current chat history with a summary. Your existing messages will be removed from this conversation. Continue?",
     summarize_in_progress:
@@ -342,9 +529,9 @@ export default {
     system_prompt_empty: "System prompt is empty. Model may not respond.",
     data_security_notice: "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG.",
     data_security_warning: 
-      "You are using an external model or external features. Your messages will be processed outside of GWDG, and your custom settings will not be applied, and GWDG Tools are not available. Please refrain from entering confidential or personal data.",
+      "You are using an external model or external tools. Your messages may be processed outside of GWDG. Custom settings and GWDG tools may not be available. Please refrain from entering confidential or personal data.",
     data_security_warning_mpg:
-      "You are using an external model or external features. Your messages will be processed outside of GWDG, and your custom settings will not be applied, and GWDG Tools are not available. Please refrain from entering confidential or personal data. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
+      "You are using an external model or external tools. Your messages may be processed outside of GWDG. Custom settings and GWDG tools may not be available. Please refrain from entering confidential or personal data. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
     arcana_usage:
       "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
     arcana_create_collection_prefix:

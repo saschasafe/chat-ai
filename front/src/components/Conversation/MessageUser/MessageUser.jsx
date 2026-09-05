@@ -5,6 +5,7 @@ import EditButton from "./EditButton";
 import EditBox from "./EditBox";
 import MessageTextContainer from "./MessageTextContainer";
 import Attachment from "../../Prompt/Attachment"
+import CopyButton from "../MessageAssistant/CopyButton";
 
 export default React.memo(({
     localState,
@@ -36,27 +37,13 @@ export default React.memo(({
         <div
             ref={userMessage}
             key={message_index}
-            className={`flex flex-col gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark
-                ${ editMode ? "p-0" : "p-2.5"}`}
+            className={`flex flex-col items-end max-w-full group pt-2`}
             >
-            {/* Non-edit mode */}
+            {/* Message content */}
             {!editMode && (
-                <div className="flex gap-1.5 justify-between items-start group">
+                <div className="flex flex-row w-fit p-2.5 gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 rounded-xl bg-bg_chat dark:bg-bg_chat_dark dark:border-gray-800 items-start">
                     {/* Display message text */}
                     <MessageTextContainer message={message} />
-                    {/* Buttons area */}
-                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-1.5 items-center">
-                        {/* Retry button */}
-                        <RetryButton
-                            localState={localState}
-                            setLocalState={setLocalState}
-                            message_index={message_index}
-                        />
-                        {/* Edit button */}
-                        <EditButton
-                            setEditMode={setEditMode}
-                        />
-                    </div>
                 </div>
             )}
             {/* Edit mode */}
@@ -82,6 +69,24 @@ export default React.memo(({
             ))}
             </div>
         )}
+         {/* Buttons area */}
+            {!editMode && (
+                <div className="flex flex-row pt-2 w-fit opacity-25 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-2.5 items-center justify-end ml-auto">
+                    {/* Retry button */}
+                    <RetryButton
+                        localState={localState}
+                        setLocalState={setLocalState}
+                        message_index={message_index}
+                    />
+                    {/* Edit button */}
+                    <EditButton
+                        setEditMode={setEditMode}
+                    />
+                    <CopyButton
+                        message={message}
+                    />
+                </div>
+            )}
         </div>
     )
 });

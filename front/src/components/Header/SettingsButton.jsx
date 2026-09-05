@@ -1,33 +1,41 @@
-import icon_settings from "../../assets/icons/settings.svg";
-
+import { Fragment } from "react";
+import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
+import { useTranslation } from "react-i18next";
+import { SettingsAdjust } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
-import { Trans, useTranslation } from "react-i18next";
-import { abortRequest } from "../../apis/chatCompletions";
-import { useToast } from "../../hooks/useToast";
-import { useDispatch, useSelector } from "react-redux";
-import { selectShowSidebar, toggleSettings, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
-import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
-import { Settings } from "lucide-react";
+import SettingsContent from "../SettingsPanel/SettingsContent";
 
-export default function SettingsButton() {
-    const { t, i18n } = useTranslation();
-    const { notifySuccess, notifyError } = useToast();
-    const dispatch = useDispatch();
-    const showSettings = useSelector(selectShowSettings);
-    const showSidebar = useSelector(selectShowSidebar);
+export default function SettingsButton({ localState, setLocalState, userData, modelsData }) {
+    const { t } = useTranslation();
+    return (
+        <Popover className="settings-toggle relative flex">
+            <Tooltip text={t("settings.chat_settings")}>
+                <PopoverButton className="flex cursor-pointer focus:outline-none">
+                    <SettingsAdjust size={24} className="cursor-pointer text-tertiary" />
+                </PopoverButton>
+            </Tooltip>
 
-    return ( 
-        <button
-        className="flex cursor-pointer"
-        onClick={() => {
-            if (showSidebar) dispatch(toggleSidebar());
-            dispatch(toggleSettings());
-        }}
-        >
-        <Settings
-            className="cursor-pointer h-7 w-7 text-[#009EE0]"
-            alt="settings"
-        />
-        </button>
+            <Transition
+                as={Fragment}
+                enter="transition ease-out duration-150"
+                enterFrom="opacity-0 translate-y-1"
+                enterTo="opacity-100 translate-y-0"
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100 translate-y-0"
+                leaveTo="opacity-0 translate-y-1"
+            >
+                <PopoverPanel
+                    anchor="top"
+                    className="z-50 mb-2 w-[26rem] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark"
+                >
+                    <SettingsContent
+                        localState={localState}
+                        setLocalState={setLocalState}
+                        userData={userData}
+                        modelsData={modelsData}
+                    />
+                </PopoverPanel>
+            </Transition>
+        </Popover>
     );
 }

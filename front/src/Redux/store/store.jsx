@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 2,
+  version: 3,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -35,11 +35,15 @@ const getDefaultState = () => {
       warn_clear_settings: true,
       count_hallucination: 0,
       count_announcement: 0,
+      show_usage_in_sidebar: true,
+      collapsed_topics: [],
     },
     // Conditionally preserve memories
     user_settings: {
       memories: [],
       timeout: 300000,
+      memory_mode: 0,
+      suggest_user_prompts: false,
     },
   };
 };

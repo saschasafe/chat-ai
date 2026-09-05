@@ -1,164 +1,152 @@
 import {
-  Fragment,
-  useCallback,
   useEffect,
-  useMemo,
-  useRef,
   useState,
 } from "react";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faChevronLeft, faPlus, faSearch, faEdit, faFileImport } from "@fortawesome/free-solid-svg-icons";
-import { faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import {
-  selectDarkMode,
-  selectShowSettings,
-  selectShowSidebar,
-  toggleSidebar,
-} from "../../Redux/reducers/interfaceSettingsSlice";
-
 import { useTranslation } from "react-i18next";
-
-import ChatAiLogo from "../../assets/logos/chat_ai.svg";
 import ChatAiLogoMini from "../../assets/logos/chat_ai_small.ico";
-import { useDispatch, useSelector } from "react-redux";
-import { createConversation } from "../../db";
-import { useNavigate } from "react-router";
-import {
-  getDefaultConversation,
-  getDefaultSettings,
-} from "../../utils/conversationUtils";
 
-import { Bot, ChevronRight, Download, Edit, Plus, Sidebar, SquarePen } from "lucide-react";
+import { ChevronRight, HorizontalLineSolid } from "@carbon/icons-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
-import ImportConversationButton from "./ImportConversationButton";
+import ImportConversationButton from "./Buttons/ImportChatButton";
 import { useModal } from "../../modals/ModalContext";
 import ShortcutTooltip from "./ShortcutTooltip";
+import UserContainer from "../Header/UserContainer";
+import ImportPersonaButton from "./Buttons/ImportPersonaButton";
+import NewChatButton from "./Buttons/NewChatButton";
+import SummarizeChatButton from "./Buttons/SummarizeChatButton";
+import ExportChatButton from "./Buttons/ExportChatButton";
+import RenameChatButton from "./Buttons/RenameChatButton";
 
-export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
+export default function SidebarRail({ 
+  localState,
+  setLocalState,
+  userData,
+  modelsData,
+  onOpen, 
+  handleNewConversation 
+}: { 
+  localState: any,
+  setLocalState: any,
+  userData: any,
+  modelsData: any,
+  onOpen: () => void, 
+  handleNewConversation: (folderId?: string | null) => Promise<void> 
+}) {
 
   const { openModal } = useModal();
   const { t } = useTranslation();
-  const newConversationLabel = t("sidebar.new_conversation");
-  const newConversationShortcut = t("sidebar.shortcut_new_conversation");
-  const newConversationAria = `${newConversationLabel} ${newConversationShortcut}`;
 
-  const handleRenameConversation = () => {
-    openModal("renameConversation", {
-      id: localState.id,
-      currentTitle: localState?.title || "Untitled Conversation",
-    });
-  };
-
-  const [currentConversationTitle, setCurrentConversationTitle] = useState(localState?.title || "Untitled Conversation");
+  const [currentConversationTitle, setCurrentConversationTitle] = useState(localState?.title || "Untitled Chat");
 
   useEffect(() => {
-    setCurrentConversationTitle(localState?.title || "Untitled Conversation");
+    setCurrentConversationTitle(localState?.title || "Untitled Chat");
   }, [localState]);
 
 
   const { isTouch } = useWindowSize();
   return (
-    <div
-      className="bg-white dark:bg-bg_secondary_dark
-              rounded-xl shadow-md
-              overflow-hidden
-              h-full"
+    <div className="bg-white dark:bg-bg_secondary_dark rounded-xl shadow-md
+          overflow-hidden h-full flex flex-col items-center justify-between gap-2"
     >
-      <div className="h-full flex flex-col items-center gap-2">
+        {/* Top - Logo and new chat */}
+        <div className="mt-2 flex flex-col gap-4 items-center">
+          {/* Logo with chevron on hover */}
+          <div className="relative h-10 w-10 group">
+            {/* Logo */}
+            <img
+              className="absolute inset-0 object-contain transition-opacity duration-200 group-hover:opacity-0"
+              src={ChatAiLogoMini}
+              alt="Chat AI Logo"
+            />
 
-        {/* Logo with chevron on hover */}
-        <div className="mt-2 relative h-10 w-10 group">
-          {/* Logo */}
-          <img
-            className="absolute inset-0 object-contain transition-opacity duration-200 group-hover:opacity-0"
-            src={ChatAiLogoMini}
-            alt="Chat AI Logo"
-          />
+            {/* Chevron Button */}
+            <ShortcutTooltip label={t("sidebar.expand") }>
+              <button
+                onClick={() => onOpen?.()}
+                className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
+                aria-label={t("sidebar.expand")}
+              >
+                <ChevronRight size={40} className="text-tertiary" />
+              </button>
+            </ShortcutTooltip>
+          </div>
 
-          {/* Chevron Button */}
-          <ShortcutTooltip label={t("sidebar.expand") }>
-            <button
-              onClick={() => onOpen?.()}
-              className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
-              aria-label={t("sidebar.expand")}
-            >
-              <ChevronRight className="w-10 h-10 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
+          {/* New chat button */}
+          <NewChatButton variant="rail" topicId={localState?.folderId} onNewConversation={handleNewConversation} />
+
+          {/* Import persona from Github button */}
+          <ImportPersonaButton variant="rail" topicId={localState?.folderId} />
+
+          {/* Import Chat button */}
+          <ImportConversationButton variant="rail" topicId={localState?.folderId} />
         </div>
 
-        {/** Actions */}
-        <div className="mt-4 flex flex-col gap-3 items-center">
-
-          {/* New chat */}
-          <ShortcutTooltip
-            label={newConversationLabel}
-            shortcut={newConversationShortcut}
-          >
-            <button
-              onClick={() => {
-                handleNewConversation().catch((error) => {
-                  console.error("Failed to start new conversation", error);
-                });
-              }}
-              className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
-              aria-label={newConversationAria}
-            >
-              <Plus className="w-5 h-5 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
-
-          {/* Rename current conversation */}
-          <ShortcutTooltip
-            label={t("sidebar.rename_tooltip", { title: currentConversationTitle })}
-          >
-            <button
-              onClick={handleRenameConversation}
-              className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-              aria-label={t("sidebar.rename_tooltip", { title: currentConversationTitle })}
-            >
-              <Edit className="w-5 h-5 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
-
-
-        </div>
+        {/* Center - Expand sidebar button */}
         <div id="placeholder" className="group flex-1 w-full hover:bg-gray-100/50 dark:hover:bg-dark_hover cursor-pointer grid place-items-center"
           onClick={() => onOpen?.()}
         >
           <ShortcutTooltip label={t("sidebar.expand") }>
             <button
               className={`
-                translate-y-[-10vh]
                 h-10 w-10 inset-0 grid place-items-center rounded-xl
                 transition duration-200 opacity-0 
                 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-dark_hover cursor-pointer
                 ${true || isTouch ? "opacity-100" : "opacity-0"}`}
               aria-label={t("sidebar.expand")}
             >
-              <FontAwesomeIcon size="xl" className=" text-tertiary" icon={faChevronRight} />
+              <ChevronRight size={20} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
         </div>
-        <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
-          {/* Import Conversation button */}
-          <ImportConversationButton variant="icon" />
 
-          {/* Import persona from Github */}
-          <ShortcutTooltip label={t("sidebar.import_persona") }>
-            <button
-              onClick={() => {
-                openModal("importPersona");
+        {/* Bottom - Current chat actions and user card */}
+        <div className="flex flex-col gap-1 items-center">
+
+          {/* Rename current chat */}
+          <RenameChatButton
+            localState={localState}
+            setLocalState={setLocalState}
+            variant={"rail"}
+          />
+
+          {/* Summarize current chat */}
+          <SummarizeChatButton
+            localState={localState}
+            setLocalState={setLocalState}
+            variant={"rail"}
+          />
+
+          {/* Export current chat */}
+          <ExportChatButton
+            localState={localState}
+            setLocalState={setLocalState}
+            variant={"rail"}
+          />
+          <HorizontalLineSolid size={30} className="text-gray-200 dark:text-gray-600" />
+          {/* User card */}
+          <div
+              role="button"
+              tabIndex={0}
+              onClick={() => {openModal("userSettings", { localState, userData, modelsData })}}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openModal("userSettings", { localState, userData, modelsData });
+                }
               }}
-              className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-              aria-label={t("sidebar.import_persona")}
+              aria-label={t("user_settings.title")}
+              className="flex items-center px-1 pt-1 pb-4 rounded-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
+              style={{ WebkitTapHighlightColor: "transparent" }}
             >
-              <Bot className="w-6 h-6 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
+            <UserContainer
+              localState={localState}
+              userData={userData}
+              modelsData={modelsData}
+              interactive={false}
+            />
+          </div>
         </div>
-      </div>
 
     </div>
   );

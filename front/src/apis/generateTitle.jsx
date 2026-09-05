@@ -1,5 +1,5 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
-import OpenAI from "openai";
+import { createBackendClient } from "./openaiClient";
 
 export default async function generateTitle(messages) {
   const defaultSettings = getDefaultSettings();
@@ -51,23 +51,8 @@ export default async function generateTitle(messages) {
     "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
 
   try {
-    // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
-    try {
-      // If absolute, parse directly
-      baseURL = new URL(baseURL).toString();
-    } catch {
-      // If relative, resolve against current origin
-      baseURL = new URL(baseURL, window.location.origin).toString();
-    }
-
     // Define openai object to call backend
-    const openai = new OpenAI({
-      baseURL : baseURL,
-      apiKey: null,
-      dangerouslyAllowBrowser: true,
-      timeout: 20000
-    });
+    const openai = createBackendClient(20000);
 
     // Initialize params
     const params = {
@@ -83,14 +68,14 @@ export default async function generateTitle(messages) {
     };
 
     const response = await openai.chat.completions.create(params);
-    const title = response?.choices[0]?.message?.content || "Untitled Conversation"
+    const title = response?.choices[0]?.message?.content || "Untitled Chat"
     return title?.trim();
   } catch (error) {
     // Handle AbortError specifically
     if (error.name === "AbortError") {
-      return "Untitled Conversation";
+      return "Untitled Chat";
     }
     console.error("Title generation failed:", error);
-    return "Untitled Conversation";
+    return "Untitled Chat";
   }
 }

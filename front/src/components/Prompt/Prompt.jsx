@@ -5,18 +5,24 @@ import SendButton from "./SendButton";
 import MicButton from "./MicButton";
 import AttachmentsContainer from "./AttachmentsContainer";
 import SettingsButton from "../Header/SettingsButton";
+import WarningExternalModel from "../Header/WarningExternalModel";
+import ModelButton from "./ModelButton";
+import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
-import ClearButton from "./ClearButton";
 import PromptTextArea from "./PromptTextArea";
+import LiveModeButton from "./LiveModeButton";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { useDebounce } from "../../hooks/useDebounce";
+import UndoButton from "../Conversation/UndoButton";
 
 export default function Prompt({
   localState,
   setLocalState,
-}) { 
+  userData,
+  modelsData,
+}) {
   const sendMessage = useSendMessage();
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
@@ -86,62 +92,95 @@ export default function Prompt({
   };
   
   return (
-    <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom">
+    <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col 
+    bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center 
+    sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom
+    md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto">
         {/* Attachments Container */}
         <AttachmentsContainer
           localState={localState}
           setLocalState={setLocalState}
         />
         <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`} >
-          {/* Prompt Text Area */}
-          <PromptTextArea
-            localState={localState}
-            setLocalState={setLocalState}
-            handleSend={handleSend}
-            handleChange={handleChange}
-            prompt={prompt}
-          />
-          {/* Buttons Section */}
-          <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-            {/* Clear Button on the left  */}
-            <ClearButton
+        {/* Prompt Text Area */}
+        <PromptTextArea
+          localState={localState}
+          setLocalState={setLocalState}
+          handleSend={handleSend}
+          handleChange={handleChange}
+          prompt={prompt}
+        />
+        
+        {/* Buttons Section */}
+        <div className="px-3 py-2 w-full h-fit grid grid-cols-[1fr_auto_1fr] items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+          {/* Buttons on the left */}
+          <div className="flex gap-4 items-center justify-start">
+            {/* Attach Button */}
+            <AttachButton
               localState={localState}
               setLocalState={setLocalState}
             />
-            {/* Buttons on the right */}
-            <div className="flex gap-4 w-full justify-end items-center">
-              {/* Settings Button */}
-              {/* <SettingsButton /> */}
-              {/* Attach Button */}
-              <AttachButton
+               {/* Mic Button */}
+            <MicButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* Live Mode Button */}
+            <LiveModeButton
+              localState={localState}
+            />
+          </div>
+          {/* Buttons in the center */}
+          <div className="flex gap-4 items-center justify-center">
+            
+            {/* Tools Button */}
+            <ToolsButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* Settings Button */}
+            <SettingsButton
+              localState={localState}
+              setLocalState={setLocalState}
+              userData={userData}
+              modelsData={modelsData}
+            />
+            {/* Model Selector — the header keeps its own on narrow screens.
+                It shrinks first, so Abort/Send never lose their place. */}
+            <div className="hidden md:flex min-w-0">
+              <ModelButton
                 localState={localState}
                 setLocalState={setLocalState}
+                modelsData={modelsData}
               />
-              {/* Attach Media Button */}
-              {/* <AttachMediaButton
+            </div>
+            {/* Data safety indicator */}
+            <div className="hidden md:flex">
+              <WarningExternalModel
                 localState={localState}
-                setLocalState={setLocalState}
-              /> */}
-              {/* Mic Button */}
-              <MicButton 
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Abort button (when loading) */}
-              <AbortButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* If not loading, show send button */}
-              <SendButton
-                localState={localState}
-                setLocalState={setLocalState}
-                handleSend={handleSend}
-                prompt={prompt}
+                userData={userData}
+                portalPanel
+                compact
               />
             </div>
           </div>
+          {/* Buttons on the right */}
+          <div className="flex gap-4 items-center justify-end min-w-0">
+            {/* Abort button (when loading) */}
+            <AbortButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* If not loading, show send button */}
+            <SendButton
+              localState={localState}
+              setLocalState={setLocalState}
+              handleSend={handleSend}
+              prompt={prompt}
+            />
+          </div>
         </div>
+      </div>
       </div>
   );
 }

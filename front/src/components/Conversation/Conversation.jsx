@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
-import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 import Prompt from "../Prompt/Prompt";
 import ClearMessagesButton from "./ClearMessagesButton";
 import EmptyConversation from "./EmptyConversation";
@@ -13,7 +13,7 @@ import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import MessageUser from "./MessageUser/MessageUser";
 import Motto from "./Motto";
 import UndoButton from "./UndoButton";
-import SummaryButton from "./SummaryButton";
+import Tooltip from "../Others/Tooltip";
 
 export default function Conversation({
   localState,
@@ -22,6 +22,7 @@ export default function Conversation({
   userData,
 }) {
   const showSettings = useSelector(selectShowSettings);
+  const { t } = useTranslation();
 
   // UI
   const [copied, setCopied] = useState(false);
@@ -217,23 +218,12 @@ export default function Conversation({
 
   return (
     <div
-      className={`w-full md:max-w-[85vw] xl:max-w-[1300px]
-                  transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none
-                  mx-auto flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
+      className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
-      {/* Model selector at top, on tablet and desktop */}
-      <div className="model-selector hidden md:block">
-        <ModelSelectorWrapper
-          localState={localState}
-          setLocalState={setLocalState}
-          modelsData={modelsData}
-        />
-      </div>
-
       {/* Empty conversation */}
       <div
-        className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max_h-[40vh] justify-end
+        className={`flex flex-col space-y-16 md:max-h-[45vh] xl:max_h-[45vh] justify-end
           ${emptyConversation ? "flex-grow" : "absolute pointer-events-none"}`}
       >
         <div
@@ -252,8 +242,7 @@ export default function Conversation({
 
       {/* Messages area */}
       <div
-        className={`flex flex-col relative w-full rounded-xl
-          bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
+        className={`flex flex-col relative w-full
           transition-opacity duration-500 ease-in-out 
           ${
             localState.messages.length <= 2
@@ -265,15 +254,16 @@ export default function Conversation({
         <HallucinationWarning />
 
         {/* Scrollable messages container */}
-        <div className="relative flex-1 min-h-0">
-          <div
-            ref={containerRef}
-            className="p-1.5 flex flex-col gap-1.5 h-full overflow-y-auto"
-            style={{
+        <div ref={containerRef}
+          className="relative flex-1 min-h-0 overflow-y-auto"
+          style={{
               scrollPaddingBottom: "20px",
               WebkitOverflowScrolling: "touch",
               // no scroll-smooth class and no inline scrollBehavior
             }}
+        >
+          <div
+            className="p-1.5 flex flex-col gap-1.5 h-full md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto"
           >
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
               <div key={message_index}>
@@ -303,10 +293,15 @@ export default function Conversation({
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
+        <div
+          className="relative px-1.5 flex flex-col w-full max-h-0 md:max-w-[85vw] xl:max-w-[1300px] mx-auto"
+        >
+        {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
           {showScrollButton && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
+              <Tooltip text={t("common.scroll")}>
               <button
                 onClick={handleScrollButtonClick}
                 aria-label="Scroll to bottom"
@@ -317,7 +312,7 @@ export default function Conversation({
                          backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
               >
                 <svg
-                  className="w-4 h-4"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -330,43 +325,29 @@ export default function Conversation({
                   />
                 </svg>
               </button>
+              </Tooltip>
             </div>
           )}
-        </div>
-
-        {/* Bottom panel */}
-        {localState?.messages?.length >= 4 && (
-          <div className="w-full select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-baseline gap-3">
-              {/* Clear Message button */}
-              <ClearMessagesButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Summary button */}
-              <SummaryButton
+          {/* Floating button - bottom right above the prompt box */}
+          {localState?.messages?.length >= 4 && (
+              <div className="absolute bottom-3 right-5 md:right-3 z-10 flex items-end">
+                {/* Undo Button */}
+                <UndoButton
                   localState={localState}
                   setLocalState={setLocalState}
                 />
-            </div>
-            <div className="flex items-baseline gap-3">
-              {/* Export button */}
-              <ExportButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Undo button */}
-              <UndoButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-            </div>
-          </div>
-        )}
+              </div>
+          )}
+        </div>
       </div>
 
       {/* Prompt */}
-      <Prompt localState={localState} setLocalState={setLocalState} />
+      <Prompt
+        localState={localState}
+        setLocalState={setLocalState}
+        userData={userData}
+        modelsData={modelsData}
+      />
       {emptyConversation && <Motto />}
     </div>
   );

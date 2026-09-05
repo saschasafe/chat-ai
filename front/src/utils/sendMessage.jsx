@@ -193,30 +193,36 @@ const sendMessage = async ({
   notifySuccess,
   dispatch,
   timeout,
+  memoryMode = 0,
+  suggestUserPrompts = false,
 }) => {
   const conversationId = localState.id
 
   try {
-    const isArcanaSupported = localState.settings.model?.input?.includes("arcana") || (localState.settings?.enable_tools && !!localState.settings.tools.arcana)   
-
     const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
     const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
     const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
 
+    const isExternalModel =
+      typeof localState.settings.model?.name === "string" &&
+      localState.settings.model.name.toLowerCase().includes("external");
+    const isToolsEnabled = toolsModule && !isExternalModel && localState.settings?.enable_tools;
+    const isArcanaSupported = isToolsEnabled && !!localState.settings.tools.arcana   
+  
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState);
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
       : "";
-    if (localState.settings?.memory != 0 && memories.length > 0) {
+    if (memoryMode !== 0 && memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
     
     // Handle tools
-    if (toolsModule && conversationForAPI.settings?.enable_tools) {
+    if (isToolsEnabled) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
@@ -227,16 +233,15 @@ const sendMessage = async ({
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
+      if (!localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
+      if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
       // Always inject audio_transcription tool for now
       conversationForAPI.settings.tools.push({ type: "audio_transcription" });
     } else {
+      delete conversationForAPI.settings.enable_tools;
       delete conversationForAPI.settings.tools;
     }
 
-    // Remove MCP and arcana if not enabled
-    if (!localState.settings?.enable_tools || !localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
-    if (!localState.settings?.enable_tools || !localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
-      
     // Clean conversation for API call
     conversationForAPI = {
       ...conversationForAPI,
@@ -558,7 +563,7 @@ const sendMessage = async ({
       };
     } finally {
       // Update choices
-      if(choicesModule && localState.settings.choiceProposer == 1){
+      if (choicesModule && suggestUserPrompts) {
         try {
           const content = localState.messages.map((message) => {
           if (Array.isArray(message.content)){
@@ -566,7 +571,6 @@ const sendMessage = async ({
           }
           });
           content.push("assistant: " + responseContent[0].text)
-          console.log(content.join("\n\n"))
 
           const response = await generateChoiceProposal(
             content.join("\n\n")
@@ -658,7 +662,7 @@ const sendMessage = async ({
 
     // Update memory if enabled
     try {
-      if (localState.settings?.memory == 2 && newUserMessage) {
+      if (memoryMode === 2 && newUserMessage) {
         const memoryResponse = await generateMemory(
           newUserMessage,
           memories

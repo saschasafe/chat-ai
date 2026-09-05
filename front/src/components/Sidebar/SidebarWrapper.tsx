@@ -5,6 +5,7 @@ import { selectShowSidebar, toggleSidebar, closeSidebar } from "../../Redux/redu
 import { useWindowSize } from "../../hooks/useWindowSize";
 
 import SidebarPanel from "./SidebarPanel";
+import SidebarContent from "./SidebarContent";
 import { useCallback, useEffect } from "react";
 import SidebarDrawer from "./SidebarDrawer";
 import { createConversation } from "../../db";
@@ -12,7 +13,12 @@ import { getDefaultConversation } from "../../utils/conversationUtils";
 import { useNavigate } from "react-router";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
-export default function SidebarWrapper({ localState, setLocalState, userData, modelsData }) {
+export default function SidebarWrapper({ 
+  localState, 
+  setLocalState, 
+  userData, 
+  modelsData 
+}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const showSidebar = useSelector(selectShowSidebar);
@@ -90,6 +96,16 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
     };
   }, [handleNewConversation]);
 
+  const sidebarContent = (
+    <SidebarContent
+      localState={localState}
+      setLocalState={setLocalState}
+      handleNewConversation={handleNewConversation}
+      userData={userData}
+      modelsData={modelsData}
+    />
+  );
+
   return (
     <>
       <div className="hidden md:flex relative min-w-[4rem] min-h-0">
@@ -98,7 +114,13 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
                       transition-all duration-300 ease-in-out
                       ${showSidebar && isDesktop ? "w-[13vw] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>
-          <SidebarRail localState={localState} onOpen={() => { dispatch(toggleSidebar()) }} handleNewConversation={handleNewConversation} />
+          <SidebarRail 
+            localState={localState}
+            setLocalState={setLocalState}
+            userData={userData}
+            modelsData={modelsData}
+            onOpen={() => { dispatch(toggleSidebar()) }}
+            handleNewConversation={handleNewConversation} />
         </div>
 
         {(isDesktop) && (
@@ -106,12 +128,12 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
           <div className={`h-full
                         transition-all duration-300 ease-in-out overflow-hidden
           ${showSidebar ? "opacity-100 w-[15rem]" : "w-[4rem] opacity-0 pointer-events-none"}`}>
-            <SidebarPanel localState={localState} setLocalState={setLocalState} handleNewConversation={handleNewConversation} />
+            <SidebarPanel>{sidebarContent}</SidebarPanel>
           </div>
         )}
       </div>
       {(!isDesktop) && (
-          <SidebarDrawer localState={localState} setLocalState={setLocalState} handleNewConversation={handleNewConversation} />
+          <SidebarDrawer>{sidebarContent}</SidebarDrawer>
         )}
     </>
   );

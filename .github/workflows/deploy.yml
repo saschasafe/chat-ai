@@ -1,0 +1,27 @@
+name: Deploy to OpenStack
+
+on:
+  push:
+    branches: 
+      - main
+      - dev
+      - stt-llm-tts+vision
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and Run with Docker Compose
+        run: |
+          # Stoppe alte Container (falls vorhanden)
+          docker compose down || true
+          
+          # Baue die Images und starte die Container
+          # --build erzwingt ein neues Build der Dockerfiles
+          docker compose up -d --build
+          
+          # Alte Images aufräumen
+          docker image prune -f
