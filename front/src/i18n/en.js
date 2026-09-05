@@ -37,7 +37,7 @@ export default {
   },
   // Live mode: hands free voice plus webcam or screen sharing
   live_mode: {
-    open: "Live Mode (voice and vision)",
+    open: "Live Mode",
     title: "Live Mode",
     status_idle: "Idle",
     status_listening: "Listening",

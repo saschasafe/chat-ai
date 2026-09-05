@@ -37,7 +37,7 @@ export default {
   },
   // Live-Modus: freihändige Sprache plus Webcam oder Bildschirmfreigabe
   live_mode: {
-    open: "Live-Modus (Sprache und Bild)",
+    open: "Live-Modus",
     title: "Live-Modus",
     status_idle: "Bereit",
     status_listening: "Hört zu",
