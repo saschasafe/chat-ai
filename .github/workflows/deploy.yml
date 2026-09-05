@@ -14,20 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker Image
+      - name: Build and Run with Docker Compose
         run: |
-          # Tag basierend auf Branch-Namen (z.B. myapp:main, myapp:dev)
-          BRANCH_NAME=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9]/-/g')
-          docker build -t myapp:${BRANCH_NAME} .
-
-      - name: Run Docker Container
-        run: |
-          # Container stoppen/entfernen falls vorhanden
-          docker stop myapp-${{ github.ref_name }} || true
-          docker rm myapp-${{ github.ref_name }} || true
+          # Stoppe alte Container (falls vorhanden)
+          docker compose down || true
           
-          # Neuen Container starten (Port 80)
-          docker run -d --name myapp-${{ github.ref_name }} -p 80:80 myapp:${BRANCH_NAME}
-
-      - name: Cleanup old images
-        run: docker image prune -f
+          # Baue die Images und starte die Container
+          # --build erzwingt ein neues Build der Dockerfiles
+          docker compose up -d --build
+          
+          # Alte Images aufräumen
+          docker image prune -f
