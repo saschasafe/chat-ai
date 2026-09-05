@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
-import { useImportConversation } from "../../hooks/useImportConversation";
+import { useImportConversation } from "../../../hooks/useImportConversation";
 import { Upload } from "@carbon/icons-react";
-import { useToast } from "../../hooks/useToast";
-import ShortcutTooltip from "./ShortcutTooltip";
+import { useToast } from "../../../hooks/useToast";
+import ShortcutTooltip from "../ShortcutTooltip";
 
 
 export default function ImportChatButton({
@@ -67,6 +67,29 @@ export default function ImportChatButton({
   };
 
   // Render icon variant (original behavior)
+  if (variant === "userData") {
+    return (
+      <>
+        <input
+          type="file"
+          ref={hiddenFileInputJSON}
+          accept="application/JSON"
+          onChange={handleFilesChangeJSON}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={handleClickJSON}
+          className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+        >
+          <Upload className="h-4 w-4" aria-hidden="true" />
+          {t("user_settings.import_data_button")}
+        </button>
+      </>
+    );
+  }
+
+  // Render icon variant (original behavior)
   if (variant === "icon") {
     return (
       <>
@@ -78,7 +101,7 @@ export default function ImportChatButton({
           className="hidden"
         />
         <ShortcutTooltip label={t("common.import")}
-        >
+>
           <button
             className={`cursor-pointer p-1.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center `}
             onClick={handleClickJSON}
@@ -91,6 +114,30 @@ export default function ImportChatButton({
       </>
     );
   }
+
+  if (variant === "rail") {
+      return (
+        <>
+        <input
+          type="file"
+          ref={hiddenFileInputJSON}
+          accept="application/JSON"
+          onChange={handleFilesChangeJSON}
+          className="hidden"
+        />
+        <ShortcutTooltip label={t("common.import")}>
+          <button
+            className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+            onClick={handleClickJSON}
+            disabled={loading}
+            aria-label={t("common.import")}
+          >
+            <Upload size={22} className="text-tertiary" />
+          </button>
+        </ShortcutTooltip>
+        </>
+      )
+    }
 
   // Render button variant (with text)
   if (variant === "button") {
