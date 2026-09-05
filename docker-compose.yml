@@ -1,28 +1,18 @@
+version: '3.8'
 services:
-  front:
-    image: chat-ai-front:latest
-    build: ./front
-    network_mode: "host"
-    volumes:
-      - ./front:/usr/src/app
-      - /usr/src/app/node_modules
-    secrets:
-      - front
-    restart: on-failure
-
-  back:
-    image: chat-ai-back:latest
+  backend:
     build: ./back
-    network_mode: "host"
-    volumes:
-      - ./back:/usr/src/app
-      - /usr/src/app/node_modules
-    secrets:
-      - back
-    restart: on-failure
+    environment:
+      - BACK_JSON=${BACK_JSON}   
+    ports:
+      - "8081:8081"
 
-secrets:
-  front:
-    file: ./secrets/front.json
-  back:
-    file: ./secrets/back.json
+
+  frontend:
+    build: ./front
+    environment:
+      - FRONT_JSON=${FRONT_JSON} 
+    ports:
+      - "80:8080"  
+    depends_on:
+      - backend
