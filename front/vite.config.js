@@ -78,6 +78,11 @@ export default defineConfig({
   server: {
     port: port,
     open: false,
+    allowedHosts: [
+      'c103-183.cloud.gwdg.de',
+      'localhost',
+      '127.0.0.1'
+    ]
   },
   preview: {
     port: port,
