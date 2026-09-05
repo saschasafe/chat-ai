@@ -1,18 +1,16 @@
-version: '3.8'
 services:
   backend:
     build: ./back
-    environment:
-      - BACK_JSON=${BACK_JSON}   
+    volumes:
+      - ~/secrets/back.json:/run/secrets/back  # <-- Mounte die Datei
     ports:
       - "8081:8081"
 
-
   frontend:
     build: ./front
-    environment:
-      - FRONT_JSON=${FRONT_JSON} 
+    volumes:
+      - ~/secrets/front.json:/run/secrets/front  # <-- Mounte die Datei
     ports:
-      - "80:8080"  
+      - "80:80"
     depends_on:
       - backend
