@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+import { stripMarkdown } from "../../utils/speech";
+
 // How far from the bottom still counts as "following along"
 const FOLLOW_THRESHOLD_PX = 48;
 
@@ -63,9 +65,10 @@ export default function LiveTranscript({ messages }) {
                     ? t("live_mode.you")
                     : t("live_mode.assistant")}
                 </span>
-                <span className="dark:text-white">
-                  {/* Reasoning blocks are not part of the spoken reply */}
-                  {getText(message).replace(/<think>[\s\S]*?<\/think>/g, "").trim()}
+                {/* A transcript of a spoken exchange, so the markdown the
+                    model wrote for the chat bubble is reduced to prose */}
+                <span className="whitespace-pre-line dark:text-white">
+                  {stripMarkdown(getText(message))}
                 </span>
                 {message.loading && (
                   <span className="ml-1 animate-pulse text-tertiary">…</span>

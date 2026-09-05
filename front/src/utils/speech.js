@@ -109,34 +109,79 @@ export function getSpeechModel() {
 }
 
 /**
- * Strip markdown and reasoning blocks so the synthesized speech does not read
- * out syntax, code or raw URLs.
+ * Strip markdown and reasoning blocks, leaving plain prose.
+ *
+ * Line structure survives on purpose: a list still reads as separate lines,
+ * both on screen and, once the lines are given an ending, out loud.
  */
-export function stripForSpeech(text) {
+export function stripMarkdown(text) {
   if (typeof text !== "string") return "";
   return (
     text
-      // Reasoning blocks are internal, never spoken
+      // Reasoning blocks are internal, never shown or spoken
       .replace(/<think>[\s\S]*?<\/think>/g, " ")
       .replace(/<think>[\s\S]*$/g, " ")
-      // Fenced code is unreadable out loud
+      // Fenced code is unreadable out loud and useless in a transcript
       .replace(/```[\s\S]*?```/g, " ")
       .replace(/`([^`]*)`/g, "$1")
       // Images out, links reduced to their text
       .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
       .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-      // Bare URLs
-      .replace(/https?:\/\/\S+/g, " ")
-      // Headings, list bullets, quotes, table pipes
+      // Headings, horizontal rules, list bullets, quotes
       .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+      .replace(/^\s*([-*_])\1{2,}\s*$/gm, "")
       .replace(/^\s*[-*+]\s+/gm, "")
       .replace(/^\s*>\s?/gm, "")
+      // The dashed row under a table header carries no words, and dropping the
+      // pipes first would leave a line of stray dashes behind
+      .replace(/^\s*[|:\-\s]*\|[|:\-\s]*$/gm, "")
       .replace(/\|/g, " ")
       // Emphasis markers
       .replace(/(\*\*|__|\*|_|~~)/g, "")
-      .replace(/\s{2,}/g, " ")
+      // Collapse runs of spaces without flattening the lines
+      .replace(/[^\S\n]{2,}/g, " ")
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
+      // Blank lines only once the emptied ones are actually empty
+      .replace(/\n{3,}/g, "\n\n")
       .trim()
   );
+}
+
+// Pictographs, skin tones, flags and the joiners that glue them together.
+// Each component is dropped on its own, which takes composed sequences apart.
+const EMOJI =
+  /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}\u200D\uFE0F\u20E3]/gu;
+
+// A voice cannot pronounce an emoji, it either skips it or makes a noise
+export function stripEmoji(text) {
+  if (typeof text !== "string") return "";
+  return text.replace(EMOJI, "");
+}
+
+// Headings and list items carry no full stop, so joining them would run the
+// lines together. Giving each one an ending lets the chunker breathe.
+function joinLinesForSpeech(text) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => (/[.!?:,;…]$/.test(line) ? line : `${line}.`))
+    .join(" ");
+}
+
+/**
+ * Prepare an assistant reply for the voice: no markdown, no emoji, no raw
+ * URLs, and a full stop wherever the layout used to do the pausing.
+ */
+export function stripForSpeech(text) {
+  const plain = stripMarkdown(text)
+    // Bare URLs are unreadable out loud
+    .replace(/https?:\/\/\S+/g, " ");
+  return joinLinesForSpeech(stripEmoji(plain))
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 // Kokoro sounds noticeably worse on very short utterances, so tiny trailing
